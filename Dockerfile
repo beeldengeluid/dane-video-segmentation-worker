@@ -50,6 +50,14 @@ RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
     make -j $(nproc) && \
     make altinstall
 
+# install pip & poetry 
+
+RUN apt install -y python3-pip
+
+RUN pip3 install poetry
+
+
+
 
 
 ## under this line: copied form https://github.com/beeldengeluid/dane-asr-worker/blob/main/Dockerfile
@@ -65,8 +73,13 @@ RUN mkdir /mnt/dane-fs
 
 WORKDIR /src
 
-RUN pip install poetry
-RUN poetry config virtualenvs.create false && poetry install --no-dev --no-interaction --no-ansi
+
+RUN poetry env use python3.10
+RUN poetry install
+
+
+
+# RUN poetry config virtualenvs.create false && poetry install --no-dev --no-interaction --no-ansi
 
 CMD [ "python", "worker.py" ]
 
