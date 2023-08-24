@@ -73,15 +73,12 @@ RUN mkdir /mnt/dane-fs
 
 WORKDIR /src
 
+# create virtual environment and install dependencies
 
 RUN poetry env use python3.10
 RUN poetry install
 
-
-
-# RUN poetry config virtualenvs.create false && poetry install --no-dev --no-interaction --no-ansi
-
-CMD [ "python", "worker.py" ]
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # references
 # # ref: https://cerebrumedge.com/blog/entry/compiling-opencv-with-cuda-and-ffmpeg-on-ubuntu-16.04#:~:text=FFMpeg%20and%20OpenCV,OPENCV_SOURCE_CODE%2F3rdparty%2Fffmpeg%2F.
