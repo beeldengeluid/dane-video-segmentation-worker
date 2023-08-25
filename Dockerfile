@@ -3,8 +3,8 @@ FROM debian:buster-slim
 # System packages
 RUN apt-get clean && apt-get update -y && apt-get upgrade -y
 
-# install dependencies
-RUN apt-get install -y git wget vim build-essential cmake pkg-config libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran ffmpeg
+# install dependencies - added libssl-dev for installing Python from source later
+RUN apt-get install -y git wget vim build-essential cmake pkg-config libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran ffmpeg libssl-dev 
 
 # install opencv_contrib
 RUN git clone https://github.com/opencv/opencv_contrib.git && \
@@ -78,7 +78,9 @@ WORKDIR /src
 RUN poetry env use python3.10
 RUN poetry install
 
-ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD [ "poetry", "run", "python", "worker.py"]
+
+# ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # references
 # # ref: https://cerebrumedge.com/blog/entry/compiling-opencv-with-cuda-and-ffmpeg-on-ubuntu-16.04#:~:text=FFMpeg%20and%20OpenCV,OPENCV_SOURCE_CODE%2F3rdparty%2Fffmpeg%2F.
