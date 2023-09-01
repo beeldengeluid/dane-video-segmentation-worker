@@ -3,8 +3,8 @@ FROM debian:buster-slim
 # System packages
 RUN apt-get clean && apt-get update -y && apt-get upgrade -y
 
-# install dependencies - added libssl-dev for installing Python from source later
-RUN apt-get install -y git wget vim build-essential cmake pkg-config libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran ffmpeg libssl-dev 
+# install dependencies - added libssl-dev for installing Python from source later and libgl1-mesa-glx for OpenCV under Python3.10
+RUN apt-get install -y git wget vim build-essential cmake pkg-config libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran ffmpeg libssl-dev libgl1-mesa-glx
 
 # install opencv_contrib
 RUN git clone https://github.com/opencv/opencv_contrib.git && \
