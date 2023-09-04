@@ -1,9 +1,14 @@
-import AudioExtractorUtil
-import base_util
+
+
 import logging
 import sys
 
 import FfMpegUtil
+import hecate_util
+import keyframe_util
+import AudioExtractorUtil
+
+import os
 
 # initialises the root logger
 logging.basicConfig(
@@ -12,21 +17,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
-def detect_shots(media_file: str)-> tuple[list[(str,str)],list[str]]:
-    cmd = f'/hecate/distribute/bin/hecate -i {media_file}'
-    hecate_result = base_util.run_shell_command(cmd)
-    logging.info(f'Hecate result: {hecate_result}')
-    # TODO: implement
-    list_of_shots = []
-    list_of_keyframe_timecodes = []
-    return (list_of_shots, list_of_keyframe_timecodes)
+def extract_shots_and_keyframes(media_file: str):
+    shots, keyframes = hecate_util.detect_shots_and_keyframes(media_file=media_file)
+    return shots, keyframes
+
     
 
-def extract_audio(media_file: str, list_of_timecodes: list[str]):
-    logger.info(f"extracting audio for {len(list_of_timecodes)} timestamps")
-    audio_worker = AudioExtractorUtil.AudioExtractorUtil()
-    audio_worker.set_media_source_file(filepath=media_file)
-    audio_worker.run(list_of_timecodes)  # smooth as vanilla ice cream
+def extract_audio(media_file: str, dict_of_timecodes: list[str], target_location: str):
+    logger.info(f"extracting audio for {len(dict_of_timecodes)} timestamps to {target_location}.")
+    AudioExtractorUtil.extract_audio_fragments(media_file=media_file,keyframe_timestamps=dict_of_timecodes,location=target_location)
 
 def turn_into_spectogram(wav_file: str):
     # TODO: implement 
@@ -35,15 +34,43 @@ def turn_into_spectogram(wav_file: str):
 
 if __name__ == "__main__":
     media_file = "/data/GEMKAN_MINANI-FHD00Z01PG3_112240_639720.mp4"
-    shots = detect_shots(media_file=media_file)
-    list_of_timecodes = [
-        "00:00:04",
-        "00:00:08.500",
-        "00:00:18.123456",
-        "00:00:33.500",
-    ]
+    source_id = "GEMKAN_MINANI-FHD00Z01PG3_112240_639720"
+    dirs = {}
+    for kind in ['keyframes','audio','metadata']:
+        dir = os.path.join('/data',source_id,kind)
+        if not os.path.isdir(dir):
+            os.makedirs(dir)
+        dirs[kind] = dir
+    run_hecate = False
+    run_keyfame_extraction = False
+    run_audio_extraction = True
 
-    # extract_audio(media_file=media_file, list_of_timecodes=list_of_timecodes)
+    if run_hecate:
+        try:
+            shots,keyframes = extract_shots_and_keyframes(media_file=media_file)
+        except:
+            logger.info(f'Could not obtain shots and keyframes. Exit.')
+            sys.exit()
+    else:
+         with open(os.path.join(dirs['metadata'],'hecate_stdout.txt'),'r') as f:
+              shots,keyframes = hecate_util.interpret_hecate_output(f.read())
+    logger.info(f'Detected {len(keyframes)} keyframes and {len(shots)} shots.')
+   
+    if run_keyfame_extraction:
+        logger.info("Extracting keyframe images now.")
+        keyframe_times = keyframe_util.extract_keyframes(media_file = media_file, keyframe_indices=keyframes, out_dir=dirs['keyframes'])
+        with open(os.path.join(dirs['metadata'],'keyframe_times.txt'),'w') as f:
+            f.write(str(keyframe_times))
+    else:
+        with open(os.path.join(dirs['metadata'],'keyframe_times.txt'),'r') as f:
+            keyframe_times = eval(f.read())
+    
+    logger.info(f'Obtained timecodes for {len(keyframes)} keyframes.')
+    
+    if run_audio_extraction:
+        extract_audio(media_file=media_file, dict_of_timecodes=keyframe_times, target_location = dirs['audio'])
+    else:
+        True
 
     
 
