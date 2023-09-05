@@ -77,9 +77,9 @@ WORKDIR /src
 # create virtual environment and install dependencies
 
 
-RUN pip3 install -r requirements.txt
+RUN python3.10 -m pip install -r requirements.txt
 
-CMD [ "python", "worker.py" ]
+CMD [ "python3.10", "worker.py" ]
 
 #RUN poetry env use python3.10
 #RUN poetry install
