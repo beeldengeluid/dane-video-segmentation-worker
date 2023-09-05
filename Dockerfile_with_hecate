@@ -53,8 +53,9 @@ RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
 # install pip & poetry 
 
 RUN apt install -y python3-pip
+RUN pip3 install --upgrade pip
 
-RUN pip3 install poetry
+#RUN pip3 install poetry
 
 
 
@@ -75,10 +76,15 @@ WORKDIR /src
 
 # create virtual environment and install dependencies
 
-RUN poetry env use python3.10
-RUN poetry install
 
-CMD [ "poetry", "run", "python", "worker.py"]
+RUN pip3 install -r requirements.txt
+
+CMD [ "python", "worker.py" ]
+
+#RUN poetry env use python3.10
+#RUN poetry install
+
+#CMD [ "poetry", "run", "python", "worker.py"]
 
 # ENTRYPOINT ["./docker-entrypoint.sh"]
 
