@@ -1,0 +1,10 @@
+requests
+pika
+yacs
+dane 
+opencv-python
+tensorflow
+scipy
+numpy
+wave
+pydub
