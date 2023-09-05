@@ -20,7 +20,7 @@ def detect_shots_and_keyframes(media_file: str)-> tuple[list[tuple[int]],list[in
 
         #int(str_index) for str_index in shot[]
 
-        return interpret_hecate_output(hecate_result) # The units are frame indices (zero-based).
+    return interpret_hecate_output(hecate_result.decode()) # The units are frame indices (zero-based).
 
 
 def interpret_hecate_output(hecate_result:str)-> tuple[list[tuple[int]],list[int]]:
