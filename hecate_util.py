@@ -17,9 +17,6 @@ def detect_shots_and_keyframes(media_file: str)-> tuple[list[tuple[int]],list[in
     except:
         logger.exception(f'Skipping hecate for {media_file}')
         return    
-
-        #int(str_index) for str_index in shot[]
-
     return interpret_hecate_output(hecate_result.decode()) # The units are frame indices (zero-based).
 
 
