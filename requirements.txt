@@ -1,10 +1,10 @@
-requests
-pika
-yacs
-dane 
-opencv-python
-tensorflow
-scipy
-numpy
-wave
-pydub
+requests >= 2.31.0
+pika >= 1.3.2
+yacs >= 0.1.8
+dane >= 0.3.8
+opencv-python >= 4.8.0.76
+tensorflow >= 2.13.0
+scipy >= 1.11.2
+numpy >= 1.24.3
+wave >= 0.0.2
+pydub >= 0.25.1
