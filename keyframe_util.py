@@ -1,7 +1,9 @@
-import cv2
+import cv2  # type: ignore
 import os
 
 import logging
+
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +14,7 @@ def extract_keyframes(
     if not os.path.exists(media_file):
         raise IOError("Input video not found")
 
-    keyframe_timestamps = {}
+    keyframe_timestamps: Dict[int, int] = {}
     vcap = cv2.VideoCapture(media_file)
     if not vcap.isOpened():
         raise IOError("Unable to open video file " + media_file)

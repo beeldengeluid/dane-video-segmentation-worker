@@ -133,7 +133,8 @@ def __validate_parent_dirs(paths: list) -> None:
 
 
 # used for hecate
-def run_shell_command(cmd: str) -> bool:
+def run_shell_command(cmd: str) -> bytes:
+    """Run cmd and return stdout"""
     logger.info(cmd)
     try:
         process = subprocess.Popen(
@@ -170,7 +171,7 @@ def run_shell_command(cmd: str) -> bool:
                 break
         """
 
-        logger.info(f"Process is done: return stdout")
+        logger.info("Process is done: return stdout")
         return stdout
 
     except subprocess.CalledProcessError:

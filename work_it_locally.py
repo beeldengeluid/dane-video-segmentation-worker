@@ -4,7 +4,7 @@ import sys
 import hecate_util
 import keyframe_util
 import spectogram_util
-import cv2
+import cv2  # type: ignore
 
 # import AudioExtractorUtil
 
@@ -49,8 +49,8 @@ if __name__ == "__main__":
                 media_file=media_file
             )
             logger.info(f"Detected {len(keyframes)} keyframes and {len(shots)} shots.")
-        except:
-            logger.info(f"Could not obtain shots and keyframes. Exit.")
+        except Exception:
+            logger.info("Could not obtain shots and keyframes. Exit.")
             sys.exit()
         fps = get_fps(media_file)
         logger.info(f"Framerate is {fps}.")

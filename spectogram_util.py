@@ -1,7 +1,7 @@
 import wave
 import numpy as np
-from pydub import AudioSegment
-import tensorflow as tf
+from pydub import AudioSegment  # type: ignore
+import tensorflow as tf  # type: ignore
 import logging
 import os
 
@@ -75,22 +75,27 @@ def raw_audio_to_spectrogram(
 
 def wav_to_raw_audio(wav_file_location: str):
     wav_file = wave.open(wav_file_location, "r")
-    n_channels, sampwidth, framerate, n_frames = wav_file.getparams()[:4]
+    n_channels, sampwidth, _frame_rate, n_frames = wav_file.getparams()[:4]
     data = wav_file.readframes(n_frames)
-    raw_audio = np.frombuffer(data, dtype=np.int16)
-    raw_audio = raw_audio.reshape((n_channels, n_frames), order="F")
-    raw_audio = raw_audio.astype(np.float32) / 32768.0
+    raw_audio = (
+        np.frombuffer(data, dtype=np.int16)
+        .reshape((n_channels, n_frames), order="F")
+        .astype(np.float32)
+        / 32768.0  # normalize
+    )
     return raw_audio
 
 
-def convert_audiobit_to_wav(media_file: str, target_location: str, frame_rate=48000):
+def convert_audiobit_to_wav(
+    media_file: str, target_location: str, frame_rate: int = 48000
+):
     audio = AudioSegment.from_file(media_file)
     audio.set_frame_rate(frame_rate)
     audio.export(target_location, format="wav")
 
 
 def raw_audio_to_spectograms(
-    raw_audio: np.array,
+    raw_audio: np.ndarray,
     keyframe_timestamps: list[int],
     location: str,
     frame_rate: int = 48000,
@@ -101,7 +106,8 @@ def raw_audio_to_spectograms(
     )  # Margin is 1/2 window. Framerate per second, window size in ms.
 
     for keyframe in keyframe_timestamps:
-        spectogram = raw_audio_to_spectrogram(  # TODO: edge case if keyframe is very close to start/end video
+        # TODO: edge case if keyframe is very close to start/end video
+        spectogram = raw_audio_to_spectrogram(
             raw_audio[
                 :, keyframe * frame_rate - margin : keyframe * frame_rate + margin
             ]
