@@ -85,5 +85,5 @@ def extract_audio_spectograms(media_file: str,keyframe_timestamps: list[int],loc
     logger.info("Convert to wav.")
     convert_audiobit_to_wav(media_file=media_file, target_location=os.path.join(tmp_location,"output.wav"))
     logger.info("obtain spectograms")
-    spectograms = raw_audio_to_spectograms(wav_to_raw_audio(os.path.join(tmp_location,"output.wav")), keyframe_timestamps=keyframe_timestamps, location = location)
+    raw_audio_to_spectograms(wav_to_raw_audio(os.path.join(tmp_location,"output.wav")), keyframe_timestamps=keyframe_timestamps, location = location)
         
