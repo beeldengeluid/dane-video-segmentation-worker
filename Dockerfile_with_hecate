@@ -52,8 +52,8 @@ RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
 
 # install pip & poetry 
 
-RUN apt install -y python3-pip
-RUN pip3 install --upgrade pip
+# RUN apt install -y python3-pip
+# RUN pip3 install --upgrade pip
 
 #RUN pip3 install poetry
 
@@ -74,19 +74,19 @@ RUN mkdir /mnt/dane-fs
 
 WORKDIR /src
 
-# create virtual environment and install dependencies
+# install dependencies
 
-
+RUN python3.10 -m pip install --upgrade pip
 RUN python3.10 -m pip install -r requirements.txt
 
-CMD [ "python3.10", "worker.py" ]
+# CMD [ "python3.10", "worker.py" ]
 
 #RUN poetry env use python3.10
 #RUN poetry install
 
 #CMD [ "poetry", "run", "python", "worker.py"]
 
-# ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # references
 # # ref: https://cerebrumedge.com/blog/entry/compiling-opencv-with-cuda-and-ffmpeg-on-ubuntu-16.04#:~:text=FFMpeg%20and%20OpenCV,OPENCV_SOURCE_CODE%2F3rdparty%2Fffmpeg%2F.
