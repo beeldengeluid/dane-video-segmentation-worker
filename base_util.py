@@ -175,10 +175,10 @@ def run_shell_command(cmd: str) -> bool:
 
     except subprocess.CalledProcessError:
         logger.exception("CalledProcessError")
-        raise Exception # TODO use appropriate exception
+        raise Exception  # TODO use appropriate exception
     except Exception:
         logger.exception("Exception")
-        raise Exception # TODO use appropriate exception
+        raise Exception  # TODO use appropriate exception
 
 
 def hash_string(s: str) -> str:
