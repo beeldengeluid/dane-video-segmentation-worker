@@ -96,7 +96,7 @@ def convert_audiobit_to_wav(
 
 def raw_audio_to_spectograms(
     raw_audio: np.ndarray,
-    keyframe_timestamps: list[int],
+    keyframe_timestamps: list[int],  # ms timestamps
     location: str,
     frame_rate: int = 48000,
     window_size_ms: int = 1000,
@@ -107,11 +107,13 @@ def raw_audio_to_spectograms(
 
     for keyframe in keyframe_timestamps:
         # TODO: edge case if keyframe is very close to start/end video
+        logger.info(f"Extracting window at {keyframe} ms. Frames {(keyframe-window_size_ms//2) * frame_rate//1000} to {(keyframe+window_size_ms//2) * frame_rate//1000}")
         spectogram = raw_audio_to_spectrogram(
             raw_audio[
-                :, keyframe * frame_rate - margin : keyframe * frame_rate + margin
+                :, (keyframe-window_size_ms//2) * frame_rate//1000:  (keyframe+window_size_ms//2) * frame_rate//1000
             ]
         )
+        logger.info(f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}")
         np.array(spectogram).tofile(os.path.join(location, f"{keyframe}.npz"))
 
 
