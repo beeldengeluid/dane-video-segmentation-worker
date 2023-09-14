@@ -114,7 +114,9 @@ def raw_audio_to_spectograms(
             ]
         )
         logger.info(f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}")
-        np.array(spectogram).tofile(os.path.join(location, f"{keyframe}.npz"))
+        spec_path = os.path.join(location, f"{keyframe}.npz")
+        out_dict = {'audio' : spectogram}
+        np.savez(spec_path, out_dict)
 
 
 def extract_audio_spectograms(
