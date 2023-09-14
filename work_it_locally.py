@@ -38,8 +38,8 @@ if __name__ == "__main__":
         if not os.path.isdir(dir):
             os.makedirs(dir)
         dirs[kind] = dir
-    run_hecate = True
-    run_keyfame_extraction = True
+    run_hecate = False
+    run_keyfame_extraction = False
     run_audio_extraction = True
 
     if run_hecate:
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         logger.info("Extracting audio spectograms now.")
         spectogram_util.extract_audio_spectograms(
             media_file=media_file,
-            keyframe_timestamps=keyframe_timestamps,
+            keyframe_timestamps=[500, 1500, 2500, 3500, 4500, 5500, 6500, 7500, 8500, 9500],
             location=dirs["spectograms"],
             tmp_location=dirs["tmp"],
         )
