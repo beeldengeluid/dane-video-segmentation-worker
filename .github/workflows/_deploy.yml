@@ -1,0 +1,14 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+
+jobs:
+  deploy-ecr:
+    if: ${{ inputs.target == 'ecr' }}
+    uses: ./.github/workflows/_build-and-push-ecr.yml
+    secrets: inherit

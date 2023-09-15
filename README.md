@@ -1,4 +1,8 @@
-# dane-audio-extraction-worker
+# dane-video-segmentation-worker
+Running hecate to extract keyframes
+Including code for audio extraction and generating spectrogram
+
+## dane-audio-extraction-worker
 
 
 `src/util` bevat twee classes, waarvan `AudioExtractorUtil.py` de file is met specifieke functies voor VisXP. Daarnaast

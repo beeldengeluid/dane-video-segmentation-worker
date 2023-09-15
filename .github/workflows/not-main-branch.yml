@@ -1,0 +1,15 @@
+name: All branches but main - test only
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+    paths-ignore:
+      - Dockerfile
+      - .dockerignore
+      - README.md
+      - LICENSE
+
+jobs:
+  test:
+    uses: "./.github/workflows/_test.yml"

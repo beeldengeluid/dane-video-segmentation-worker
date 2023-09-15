@@ -20,14 +20,6 @@ ELASTICSEARCH:
     PASSWORD: '' # change this for production mode
     SCHEME: 'http'
     INDEX: 'dane-index-k8s-asr'
-LOCAL_KALDI:  # TODO use this in worker.py
-    ASR_PACKAGE_NAME: 'asr-features.tar.gz'
-    ASR_WORD_JSON_FILE: 'words.json'
-    # (as module) kaldi NL base dir and the decoder script therein
-    KALDI_NL_DIR: '/opt/Kaldi_NL'
-    KALDI_NL_DECODER: 'decode_OH.sh'  # 'decode.sh'
-    KALDI_NL_MODEL_DIR: '/models'  # language models will be downloaded here (should be /mnt/dane-fs/models when kaldi_nl supports this)
-    KALDI_NL_MODEL_FETCHER: 'entrypoint.sh'
 FILE_SYSTEM:
     BASE_MOUNT: 'mount' #'mount' when running locally
     INPUT_DIR: 'input-files'
