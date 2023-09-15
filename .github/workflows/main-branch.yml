@@ -12,7 +12,7 @@ jobs:
   test:
     uses: ./.github/workflows/_test.yml
 
-  build-and-push-ecr:
-    uses: ./.github/workflows/_build-and-push-ecr.yml
-    secrets: inherit
-    needs: [test]
+  # build-and-push-ecr:
+  #   uses: ./.github/workflows/_build-and-push-ecr.yml
+  #   secrets: inherit
+  #   needs: [test]
