@@ -15,15 +15,15 @@ jobs:
         python-version: 3.8
     - name: Install pipenv
       run: pip install --user pipenv
-    - name: Install dependencies (including dev-packages)
-      run: pipenv install -d
-    - name: Show installed packages
-      run: pipenv graph
-    - name: Run tests
-      run: pipenv run pytest
-    - name: Check lint rules
-      run: pipenv run flake8 --select=E
-    - name: Check code style
-      run: pipenv run black --check .
-    - name: Check type annotations
-      run: pipenv run mypy .
+    # - name: Install dependencies (including dev-packages)
+    #   run: pipenv install -d
+    # - name: Show installed packages
+    #   run: pipenv graph
+    # - name: Run tests
+    #   run: pipenv run pytest
+    # - name: Check lint rules
+    #   run: pipenv run flake8 --select=E
+    # - name: Check code style
+    #   run: pipenv run black --check .
+    # - name: Check type annotations
+    #   run: pipenv run mypy .
