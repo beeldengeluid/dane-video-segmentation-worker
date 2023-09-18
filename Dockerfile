@@ -31,6 +31,8 @@ RUN cd /opencv/build && \
     make -j2 && \
     make install && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib>>~/.bashrc
 
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
+
 # install hecate
 RUN git clone https://github.com/yahoo/hecate.git && \
     cd hecate && \
