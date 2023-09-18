@@ -24,7 +24,7 @@ def generate_input_for_feature_extraction(
 
     output_dirs = {}
     for kind in ["keyframes", "metadata", "spectograms", "tmp"]:
-        output_dir = os.path.join("/data", os.path.basename(input_file_path), kind)
+        output_dir = os.path.join("/data", _get_source_id(input_file_path), kind)
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
         output_dirs[kind] = output_dir
@@ -39,7 +39,7 @@ def generate_input_for_feature_extraction(
         except Exception:
             logger.info("Could not obtain shots and keyframes. Exit.")
             sys.exit()
-        fps = get_fps(input_file_path)
+        fps = _get_fps(input_file_path)
         logger.info(f"Framerate is {fps}.")
         with open(
             os.path.join(output_dirs["metadata"], "shot_boundaries_timestamps_ms.txt"),
@@ -49,8 +49,8 @@ def generate_input_for_feature_extraction(
                 str(
                     [
                         (
-                            frame_index_to_timecode(start, fps),
-                            frame_index_to_timecode(end, fps),
+                            _frame_index_to_timecode(start, fps),
+                            _frame_index_to_timecode(end, fps),
                         )
                         for (start, end) in shots
                     ]
@@ -63,7 +63,7 @@ def generate_input_for_feature_extraction(
         with open(
             os.path.join(output_dirs["metadata"], "keyframes_timestamps_ms.txt"), "w"
         ) as f:
-            f.write(str([frame_index_to_timecode(i, fps) for i in keyframes]))
+            f.write(str([_frame_index_to_timecode(i, fps) for i in keyframes]))
 
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
         logger.info("Extracting keyframe images now.")
@@ -106,12 +106,17 @@ def generate_input_for_feature_extraction(
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
 
 
-def frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
+def _get_source_id(input_file_path: str) -> str:
+    fn = os.path.basename(input_file_path)
+    return fn[0 : fn.rfind(".")] if "." in fn else fn
+
+
+def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
     if out_format == "ms":
         return round(frame_index / fps * 1000)
 
 
-def get_fps(media_file):
+def _get_fps(media_file):
     return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FPS)
 
 

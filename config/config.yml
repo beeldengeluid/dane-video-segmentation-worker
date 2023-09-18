@@ -32,7 +32,7 @@ VISXP_PREP:
     RUN_HECATE: true
     RUN_KEYFRAME_EXTRACTION: true
     RUN_AUDIO_EXTRACTION: true
-    TEST_INPUT_FILE: /data/test_openbeelden.mp4  # or null
+    TEST_INPUT_FILE: /data/testob.mp4  # or null
 INPUT:
     DELETE_ON_COMPLETION: True
 OUTPUT:
