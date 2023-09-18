@@ -1,2 +1,5 @@
 *.mp4
 /config-local.yml
+/data
+__pycache__
+.coverage
