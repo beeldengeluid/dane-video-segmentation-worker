@@ -5,6 +5,7 @@ import keyframe_util
 import spectogram_util
 import cv2  # type: ignore
 import os
+from base_util import get_source_id
 from dane.config import cfg
 from dataclasses import dataclass
 
@@ -24,7 +25,7 @@ def generate_input_for_feature_extraction(
 
     output_dirs = {}
     for kind in ["keyframes", "metadata", "spectograms", "tmp"]:
-        output_dir = os.path.join("/data", _get_source_id(input_file_path), kind)
+        output_dir = os.path.join("/data", get_source_id(input_file_path), kind)
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
         output_dirs[kind] = output_dir
@@ -104,11 +105,6 @@ def generate_input_for_feature_extraction(
             tmp_location=output_dirs["tmp"],
         )
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
-
-
-def _get_source_id(input_file_path: str) -> str:
-    fn = os.path.basename(input_file_path)
-    return fn[0 : fn.rfind(".")] if "." in fn else fn
 
 
 def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):

@@ -124,8 +124,8 @@ def raw_audio_to_spectograms(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
         )
         spec_path = os.path.join(location, f"{keyframe}.npz")
-        # out_dict = {"audio": spectogram}
-        np.savez(spec_path, audio=spectogram)  # out_dict as argument gives mypy error
+        out_dict = {"audio": spectogram}
+        np.savez(spec_path, out_dict)  # type: ignore
 
 
 def extract_audio_spectograms(
