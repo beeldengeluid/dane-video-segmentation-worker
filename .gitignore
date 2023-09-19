@@ -8,3 +8,4 @@ __pycache__
 !/tests/data/mp4s/test.mp4
 !/tests/data/spectograms/*
 !/tests/data/spectograms/README.md
+/config.yml
