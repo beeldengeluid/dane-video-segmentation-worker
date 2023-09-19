@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "DANE worker providing input for VisXP feature extraction"
 authors = ["Jaap Blom <jblom@beeldengeluid.nl>"]
 readme = "README.md"
-packages = [{include = "dane_video_segmentation_worker"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
