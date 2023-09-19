@@ -15,3 +15,5 @@ Installing `python-opencv` in a virtualenv, and thus not as a system package, co
 ```
 sudo apt-get install libgl1
 ```
+
+(also see: https://stackoverflow.com/questions/64664094/i-cannot-use-opencv2-and-received-importerror-libgl-so-1-cannot-open-shared-obj)
