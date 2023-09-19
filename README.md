@@ -1,10 +1,12 @@
 # dane-video-segmentation-worker
 
-Running hecate to extract keyframes
-Including code for audio extraction and generating spectrogra
+Running hecate to detect shots and keyframes.
+Including code for extracting keyframes,  extracting audio, and generating spectrograms.
 
 
 ## Installation
+
+Install Hecate following the instructions in https://github.com/yahoo/hecate.
 
 ```sh
 poetry install
