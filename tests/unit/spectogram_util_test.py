@@ -1,84 +1,50 @@
 import pytest
-from spectogram_util import extract_audio_spectograms
+import shutil
+from spectogram_util import extract_audio_spectograms, raw_audio_to_spectrogram
 import os
+from base_util import get_source_id
 import numpy as np
 
-DUMMY_FILE_PATH = "/src/tests/data/ZQWO_DYnq5Q_000000.mp4"
-TMP_OUTPUT_PATH = "/tmp"
-EXAMPLE_OUTPUT_PATH = "/src/tests/data/ZQWO_DYnq5Q_000000_example_output"
+MP4_INPUT_DIR = (
+    "./tests/data/mp4s"  # any file in this dir will be subjected to this test
+)
+SPECTOGRAM_OUTPUT_DIR = (
+    "./tests/data/spectograms"  # will be cleaned up after each test run
+)
+TMP_OUTPUT_PATH = "/tmp"  # should be available on most systems
 
 
-def generate_example_output(
-    media_file=DUMMY_FILE_PATH, output_path=EXAMPLE_OUTPUT_PATH
-):  # Copied from https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py
-    from pathlib import Path
+def generate_source_ids():
+    mp4_files = []
+    for root, dirs, files in os.walk(MP4_INPUT_DIR):
+        for f in files:
+            if f.find(".mp4") != -1:
+                mp4_files.append(get_source_id(f))
+    return mp4_files
+
+
+def to_output_dir(source_id: str) -> str:
+    return f"{SPECTOGRAM_OUTPUT_DIR}/{source_id}_example_output"
+
+
+def to_input_file(source_id: str) -> str:
+    return f"{MP4_INPUT_DIR}/{source_id}.mp4"
+
+
+def cleanup_output(source_id: str):
+    output_path = to_output_dir(source_id)
+    try:
+        shutil.rmtree(output_path)
+    except Exception:
+        return False
+    return True
+
+
+# Copied from https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py
+def generate_example_output(media_file: str, output_path: str):
     import wave
     import numpy as np
     from pydub import AudioSegment
-    import tensorflow as tf
-
-    def make_spectrogram(
-        audio,  # some waveform of shape 1 x n_samples, tensorflow tensor
-        stft_length=2048,
-        stft_step=1024,
-        stft_pad_end=True,
-        use_mel=True,
-        mel_lower_edge_hertz=80.0,
-        mel_upper_edge_hertz=7600.0,
-        mel_sample_rate=48000.0,
-        mel_num_bins=40,
-        use_log=True,
-        log_eps=1.0,
-        log_scale=10000.0,
-    ):
-        """Computes (mel) spectrograms for signals t."""
-
-        stfts = tf.signal.stft(
-            audio,
-            frame_length=stft_length,
-            frame_step=stft_step,
-            fft_length=stft_length,
-            pad_end=stft_pad_end,
-        )
-        spectrogram = tf.abs(stfts)
-        if use_mel:
-            num_spectrogram_bins = spectrogram.shape[-1]
-            linear_to_mel_weight_matrix = tf.signal.linear_to_mel_weight_matrix(
-                mel_num_bins,
-                num_spectrogram_bins,
-                mel_sample_rate,
-                mel_lower_edge_hertz,
-                mel_upper_edge_hertz,
-            )
-            spectrogram = tf.tensordot(spectrogram, linear_to_mel_weight_matrix, 1)
-            spectrogram.set_shape(
-                spectrogram.shape[:-1] + linear_to_mel_weight_matrix.shape[-1:]
-            )
-
-        if use_log:
-            spectrogram = tf.math.log(log_eps + log_scale * spectrogram)
-        return spectrogram
-
-    def raw_audio_to_spectrogram(
-        raw_audio,  # some waveform of shape 1 x n_samples, tensorflow tensor
-        sample_rate=48000,
-        stft_length=0.032,
-        stft_step=0.016,
-        mel_bins=80,
-        rm_audio=False,
-    ):
-        """Computes audio spectrogram and eventually removes raw audio."""
-        stft_length = int(sample_rate * stft_length)
-        stft_step = int(sample_rate * stft_step)
-        mel_spectrogram = make_spectrogram(
-            audio=raw_audio,
-            mel_sample_rate=sample_rate,
-            stft_length=stft_length,
-            stft_step=stft_step,
-            mel_num_bins=mel_bins,
-            use_mel=True,
-        )
-        return mel_spectrogram
 
     # Convert MP4 to WAV
     audio = AudioSegment.from_file(media_file)
@@ -92,7 +58,7 @@ def generate_example_output(
     data = wav_file.readframes(n_frames)
     raw_audio = np.frombuffer(data, dtype=np.int16)
     raw_audio = raw_audio.reshape((n_channels, n_frames), order="F")
-    raw_audio = raw_audio.astype(np.float32) / 32768.0
+    raw_audio = raw_audio.astype(np.float32) / 32768.0  # type: ignore
 
     # Segment audio into 1 second chunks
     n_samples = raw_audio.shape[1]
@@ -112,36 +78,49 @@ def generate_example_output(
 
     # Save spectrogram to file
     for i, spectrogram in enumerate(spectrograms):
-        spec_path =os.path.join(output_path, f'{i}.npz')
+        spec_path = os.path.join(output_path, f"{i}.npz")
         out_dict = {"audio": spectrogram}
-        np.savez(spec_path, out_dict)
+        np.savez(spec_path, out_dict)  # type: ignore
 
 
-def assert_example_output(example_output_path=EXAMPLE_OUTPUT_PATH, n_files: int=9):
-    if not os.path.exists(example_output_path):
-        os.makedirs(example_output_path)
+def assert_example_output(output_path: str, n_files: int):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
     for i in range(n_files):
-        if not os.path.isfile(os.path.join(example_output_path, f"{i}.npz")):
+        if not os.path.isfile(os.path.join(output_path, f"{i}.npz")):
             return False
     return True
 
 
 @pytest.mark.parametrize(
-    "media_file, keyframe_timestamps, tmp_location, example_output_path",
+    "source_id, keyframe_timestamps, tmp_location",
     [
         (
-            DUMMY_FILE_PATH,
-            [500, 1500, 2500, 3500, 4500, 5500, 6500, 7500, 8500],  # , 9500],
+            source_id,
+            [
+                500,
+                1500,
+                2500,
+                3500,
+                4500,
+                5500,
+                6500,
+                7500,
+                8500,
+            ],  # for now the same for each mp4
             TMP_OUTPUT_PATH,
-            EXAMPLE_OUTPUT_PATH,
-        ),
+        )
+        for source_id in generate_source_ids()
     ],
 )
 def test_extract_audio_spectograms(
-    media_file, keyframe_timestamps, tmp_location, example_output_path
+    source_id: str, keyframe_timestamps: list, tmp_location: str
 ):
-    if not assert_example_output():
-        generate_example_output()
+    media_file = to_input_file(source_id)
+    output_path = to_output_dir(source_id)
+
+    if not assert_example_output(output_path, len(keyframe_timestamps)):
+        generate_example_output(media_file, output_path)
 
     extract_audio_spectograms(
         media_file=media_file,
@@ -151,12 +130,13 @@ def test_extract_audio_spectograms(
     )
     for i, timestamp in enumerate(keyframe_timestamps):
         # Load example spectogram (following https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py)
-        example_path = os.path.join(example_output_path, f"{i}.npz")
+        example_path = os.path.join(output_path, f"{i}.npz")
         example_data = np.load(example_path, allow_pickle=True)
         example_spectogram = example_data["arr_0"].item()["audio"]
 
-        real_path = os.path.join(tmp_location, f'{timestamp}.npz')
+        real_path = os.path.join(tmp_location, f"{timestamp}.npz")
         real_data = np.load(real_path, allow_pickle=True)
         real_spectogram = real_data["arr_0"].item()["audio"]
 
         assert np.equal(real_spectogram, example_spectogram).all()
+    assert cleanup_output(source_id)
