@@ -8,22 +8,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v3
+    - name: "Checkout Repository"
+      uses: "actions/checkout@v3"
+
+    - name: "Install Python"
+      uses: "actions/setup-python@v4"
       with:
-        python-version: 3.8
-    - name: Install pipenv
-      run: pip install --user pipenv
-    # - name: Install dependencies (including dev-packages)
-    #   run: pipenv install -d
-    # - name: Show installed packages
-    #   run: pipenv graph
-    # - name: Run tests
-    #   run: pipenv run pytest
-    # - name: Check lint rules
-    #   run: pipenv run flake8 --select=E
-    # - name: Check code style
-    #   run: pipenv run black --check .
-    # - name: Check type annotations
-    #   run: pipenv run mypy .
+        python-version: "3.10"
+
+    - name: "Install poetry"
+      run: "pip install --user poetry"
+
+    - name: "Install dev environment"
+      run: " poetry install --no-interaction --no-ansi"
+
+    # - name: "test"
+    #   run: |
+    #     cp config_test.yml config.yml
+    #     poetry run pytest
+
+    - name: "flake8"
+      run: "poetry run flake8"
+
+    - name: "black"
+      run: "poetry run black --check ."
+
+    - name: "mypy"
+      run: "poetry run mypy ."

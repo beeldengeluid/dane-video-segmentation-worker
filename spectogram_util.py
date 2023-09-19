@@ -101,22 +101,31 @@ def raw_audio_to_spectograms(
     frame_rate: int = 48000,
     window_size_ms: int = 1000,
 ):
-    margin = int(
-        (window_size_ms / 2000) * frame_rate
-    )  # Margin is 1/2 window. Framerate per second, window size in ms.
+    # margin = int(
+    #     (window_size_ms / 2000) * frame_rate
+    # )  # Margin is 1/2 window. Framerate per second, window size in ms.
 
     for keyframe in keyframe_timestamps:
         # TODO: edge case if keyframe is very close to start/end video
-        logger.info(f"Extracting window at {keyframe} ms. Frames {(keyframe-window_size_ms//2) * frame_rate//1000} to {(keyframe+window_size_ms//2) * frame_rate//1000}")
+        logger.info(
+            f"Extracting window at {keyframe} ms. Frames {(keyframe-window_size_ms//2) * frame_rate//1000} to {(keyframe+window_size_ms//2) * frame_rate//1000}"
+        )
         spectogram = raw_audio_to_spectrogram(
             raw_audio[
-                :, (keyframe-window_size_ms//2) * frame_rate//1000:  (keyframe+window_size_ms//2) * frame_rate//1000
+                :,
+                (keyframe - window_size_ms // 2)
+                * frame_rate
+                // 1000 : (keyframe + window_size_ms // 2)
+                * frame_rate
+                // 1000,
             ]
         )
-        logger.info(f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}")
+        logger.info(
+            f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
+        )
         spec_path = os.path.join(location, f"{keyframe}.npz")
-        out_dict = {'audio' : spectogram}
-        np.savez(spec_path, out_dict)
+        # out_dict = {"audio": spectogram}
+        np.savez(spec_path, audio=spectogram)  # out_dict as argument gives mypy error
 
 
 def extract_audio_spectograms(

@@ -1,0 +1,13 @@
+version: '3'
+services:
+  web:
+    image: dane-video-segmentation-worker:latest
+    volumes:
+      - ./data:/data
+      - ./config:/root/.DANE
+    container_name: visxp
+    # command: --cfg=/mnt/data/config.yml
+    logging:
+      options:
+        max-size: 20m
+    restart: always

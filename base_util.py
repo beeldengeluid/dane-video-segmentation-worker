@@ -45,7 +45,7 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
         assert check_setting(config.ELASTICSEARCH.HOST, list), "ELASTICSEARCH.HOST"
         assert (
             len(config.ELASTICSEARCH.HOST) == 1
-            and type(config.ELASTICSEARCH.HOST[0]) == str
+            and type(config.ELASTICSEARCH.HOST[0]) is str
         ), "Invalid ELASTICSEARCH.HOST"
 
         assert check_setting(config.ELASTICSEARCH.PORT, int), "ELASTICSEARCH.PORT"
@@ -111,13 +111,13 @@ def __validate_dane_paths(dane_temp_folder: str, dane_out_folder: str) -> None:
 
 
 def check_setting(setting: Any, t: type, optional=False) -> bool:
-    return (type(setting) == t and optional is False) or (
-        optional and (setting is None or type(setting) == t)
+    return (type(setting) is t and optional is False) or (
+        optional and (setting is None or type(setting) is t)
     )
 
 
 def __check_dane_dependencies(deps: Any) -> bool:
-    deps_to_check: list = deps if type(deps) == list else []
+    deps_to_check: list = deps if type(deps) is list else []
     deps_allowed = ["DOWNLOAD", "BG_DOWNLOAD"]
     return any(dep in deps_allowed for dep in deps_to_check)
 

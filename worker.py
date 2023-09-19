@@ -1,4 +1,4 @@
-from typing import List, Literal, TypedDict, Optional
+from typing import TypedDict, Optional
 import os
 import ntpath
 import sys
@@ -12,27 +12,18 @@ from dane.base_classes import base_worker
 from dane.config import cfg
 from dane import Document, Task, Result
 from base_util import validate_config, LOG_FORMAT
+from output_util import transfer_output, delete_local_output
 from pika.exceptions import ChannelClosedByBroker
+from visxp_prep import generate_input_for_feature_extraction
 
 """
-This class implements a DANE worker and thus serves as the process receiving tasks from DANE
-
-This particular worker only picks up work from the ASR queue and only will go ahead with (ASR) processing
-audiovisual input.
-
-The input file is obtained by requesting the file path from the document index. This file path SHOULD have been
-made available by the download worker (before the task was received in this worker)
-"""
-
-
-"""
-TODO now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLDER is not used:
+NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLDER is not used:
 
 - /mnt/dane-fs/output-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
 
-Instead we put the ASR in:
+Instead we put the output in:
 
-- /mnt/dane-fs/output-files/asr-output/{asset-id}
+- /mnt/dane-fs/output-files/visxp_prep/{asset-id}
 """
 # initialises the root logger
 logging.basicConfig(
@@ -41,25 +32,6 @@ logging.basicConfig(
     format=LOG_FORMAT,
 )
 logger = logging.getLogger()
-
-
-# TODO get version from Kaldi CLI
-@dataclass
-class AudioExtractionProvenance:
-    processing_time: float  # retrieved via submit_asr_job()
-    download_time: float  # retrieved via dane-beng-download-worker or download_content()
-    kaldi_nl_version: str = "Kaldi-NL v0.4.1"  # default for now
-    kaldi_nl_git_url: str = (
-        "https://github.com/opensource-spraakherkenning-nl/Kaldi_NL"  # default for now
-    )
-
-    def to_json(self):
-        return {
-            "processing_time": self.processing_time,
-            "download_time": self.download_time,
-            "kaldi_nl_version": self.kaldi_nl_version,
-            "kaldi_nl_git_url": self.kaldi_nl_git_url,
-        }
 
 
 # NOTE copied from dane-beng-download-worker (move this to DANE later)
@@ -77,11 +49,11 @@ class CallbackResponse(TypedDict):
     message: str
 
 
-class AudioExtractionWorker(base_worker):
+class VideoSegmentationWorker(base_worker):
     def __init__(self, config):
         logger.info(config)
 
-        self.UNIT_TESTING = os.getenv("DW_AEX_UNIT_TESTING", False)
+        self.UNIT_TESTING = os.getenv("DW_VISXP_UNIT_TESTING", False)
 
         if not validate_config(config, not self.UNIT_TESTING):
             logger.error("Invalid config, quitting")
@@ -94,10 +66,10 @@ class AudioExtractionWorker(base_worker):
             self.BASE_MOUNT: str = config.FILE_SYSTEM.BASE_MOUNT
 
             # construct the input & output paths using the base mount as a parent dir
-            self.AEX_INPUT_DIR: str = os.path.join(
+            self.DOWNLOAD_DIR: str = os.path.join(
                 self.BASE_MOUNT, config.FILE_SYSTEM.INPUT_DIR
             )
-            self.AEX_OUTPUT_DIR: str = os.path.join(
+            self.VISXP_OUTPUT_DIR: str = os.path.join(
                 self.BASE_MOUNT, config.FILE_SYSTEM.OUTPUT_DIR
             )
 
@@ -117,21 +89,20 @@ class AudioExtractionWorker(base_worker):
             sys.exit()
 
         # check if the file system is setup properly
-        if not self.validate_data_dirs(self.AEX_INPUT_DIR, self.AEX_OUTPUT_DIR):
+        if not self.validate_data_dirs(self.DOWNLOAD_DIR, self.VISXP_OUTPUT_DIR):
             logger.info("ERROR: data dirs not configured properly")
             if not self.UNIT_TESTING:
                 sys.exit()
 
         # we specify a queue name because every worker of this type should
         # listen to the same queue
-        self.__queue_name = (
-            "AEX"  # this is the queue that receives the work and NOT the reply queue
-        )
-        self.__binding_key = "#.AEX"  # ['Video.ASR', 'Sound.ASR']#'#.ASR'
+        self.__queue_name = "VISXP_PREP"  # this is the queue that receives the work and NOT the reply queue
+        self.DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
+        self.__binding_key = "#.VISXP_PREP"  # ['Video.ASR', 'Sound.ASR']#'#.ASR'
         self.__depends_on = self.DANE_DEPENDENCIES  # TODO make this part of DANE lib?
 
         if not self.UNIT_TESTING:
-            logger.warning("Need to initialize the AEX service")
+            logger.warning("Need to initialize the VISXP_PREP service")
 
         super().__init__(
             self.__queue_name,
@@ -142,22 +113,11 @@ class AudioExtractionWorker(base_worker):
             no_api=self.UNIT_TESTING,
         )
 
-    def __get_downloader_type(self) -> Literal["DOWNLOAD", "BG_DOWNLOAD"] | None:
-        logger.info("determining downloader type")
-        if "DOWNLOAD" in self.DANE_DEPENDENCIES:
-            return "DOWNLOAD"
-        elif "BG_DOWNLOAD" in self.DANE_DEPENDENCIES:
-            return "BG_DOWNLOAD"
-        logger.warning(
-            "Warning: did not find DOWNLOAD or BG_DOWNLOAD in worker dependencies"
-        )
-        return None
-
     """----------------------------------INIT VALIDATION FUNCTIONS ---------------------------------"""
 
-    def validate_data_dirs(self, asr_input_dir: str, asr_output_dir: str) -> bool:
-        i_dir = Path(asr_input_dir)
-        o_dir = Path(asr_output_dir)
+    def validate_data_dirs(self, input_dir: str, visxp_output_dir: str) -> bool:
+        i_dir = Path(input_dir)
+        o_dir = Path(visxp_output_dir)
 
         if not os.path.exists(i_dir.parent.absolute()):
             logger.info(
@@ -190,15 +150,8 @@ class AudioExtractionWorker(base_worker):
         logger.info(task)
         logger.info(doc)
 
-        # TODO check if a transcript was already generated
-
-        # either DOWNLOAD, BG_DOWNLOAD or None (meaning the ASR worker will try to download the data itself)
-        downloader_type = self.__get_downloader_type()
-
         # step 1: try to fetch the content via the configured DANE download worker
-        download_result = (
-            self.fetch_downloaded_content(doc) if downloader_type is not None else None
-        )
+        download_result = self.fetch_downloaded_content(doc)
 
         # step 2: try to download the file if no DANE download worker was configured
         if download_result is None:
@@ -214,32 +167,22 @@ class AudioExtractionWorker(base_worker):
 
         input_file = download_result.file_path
 
-        # step 3: submit the input file to the ASR service
-        asr_result = self.asr_service.submit_asr_job(input_file)
-        # TODO harmonize the asr_result in both work_processor and asr_service
-        logger.info(asr_result)
+        # step 3: submit the input file to hecate/etc
+        proc_result = generate_input_for_feature_extraction(input_file)
 
         # step 4: generate a transcript from the ASR service's output
-        if asr_result.state != 200:
+        if proc_result.state != 200:
             # something went wrong inside the ASR service, return that response here
-            return {"state": asr_result.state, "message": asr_result.message}
+            return {"state": proc_result.state, "message": proc_result.message}
 
         # step 5: ASR returned successfully, generate the transcript
         asset_id = self.get_asset_id(input_file)
-        asr_output_dir = self.get_aex_output_dir(asset_id)
-        transcript = generate_transcript(asr_output_dir)
-
-        #
-        if not transcript:
-            return {
-                "state": 500,
-                "message": "Failed to generate a transcript file from the ASR service output",
-            }
+        visxp_output_dir = self.get_visxp_output_dir(asset_id)
 
         # step 6: transfer the output to S3 (if configured so)
         transfer_success = True
         if self.TRANSFER_OUTPUT_ON_COMPLETION:
-            transfer_success = transfer_asr_output(asr_output_dir, asset_id)
+            transfer_success = transfer_output(visxp_output_dir, asset_id)
 
         if (
             not transfer_success
@@ -252,12 +195,12 @@ class AudioExtractionWorker(base_worker):
         # step 7: clear the output files (if configured so)
         delete_success = True
         if self.DELETE_OUTPUT_ON_COMPLETION:
-            delete_success = delete_asr_output(asr_output_dir)
+            delete_success = delete_local_output(visxp_output_dir)
 
         if (
             not delete_success
         ):  # NOTE: just a warning for now, but one to keep an EYE out for
-            logger.warning(f"Could not delete output files: {asr_output_dir}")
+            logger.warning(f"Could not delete output files: {visxp_output_dir}")
 
         # step 8: clean the input file (if configured so)
         if not self.cleanup_input_file(input_file, self.DELETE_INPUT_ON_COMPLETION):
@@ -270,47 +213,45 @@ class AudioExtractionWorker(base_worker):
         self.save_to_dane_index(
             doc,
             task,
-            transcript,
-            asr_output_dir,
-            ASRProvenance(asr_result.processing_time, download_result.download_time),
+            visxp_output_dir,  # TODO adapt function and pass whatever is neccesary for VisXP
         )
         return {
             "state": 200,
-            "message": "Successfully generated a transcript file from the ASR service output",
+            "message": "Successfully generated VisXP data for the next worker",
         }
 
-    # TODO move this to DANE library as it is quite generic (DELETE_INPUT_ON_COMPLETION param as well)
+    # TODO adapt this function for VisXP
     def cleanup_input_file(self, input_file: str, actually_delete: bool) -> bool:
-        logger.info(f"Verifying deletion of input file: {input_file}")
-        if actually_delete is False:
-            logger.info("Configured to leave the input alone, skipping deletion")
-            return True
+        # logger.info(f"Verifying deletion of input file: {input_file}")
+        # if actually_delete is False:
+        #     logger.info("Configured to leave the input alone, skipping deletion")
+        #     return True
 
-        # first remove the input file
-        try:
-            os.remove(input_file)
-            logger.info(f"Deleted ASR input file: {input_file}")
-            # also remove the transcoded mp3 file (if any)
-            if input_file.find(".mp3") == -1 and input_file.find(".") != -1:
-                mp3_input_file = f"{input_file[:input_file.rfind('.')]}.mp3"
-                if os.path.exists(mp3_input_file):
-                    os.remove(mp3_input_file)
-                    logger.info(f"Deleted mp3 transcode file: {mp3_input_file}")
-        except OSError:
-            logger.exception("Could not delete input file")
-            return False
+        # # first remove the input file
+        # try:
+        #     os.remove(input_file)
+        #     logger.info(f"Deleted ASR input file: {input_file}")
+        #     # also remove the transcoded mp3 file (if any)
+        #     if input_file.find(".mp3") == -1 and input_file.find(".") != -1:
+        #         mp3_input_file = f"{input_file[:input_file.rfind('.')]}.mp3"
+        #         if os.path.exists(mp3_input_file):
+        #             os.remove(mp3_input_file)
+        #             logger.info(f"Deleted mp3 transcode file: {mp3_input_file}")
+        # except OSError:
+        #     logger.exception("Could not delete input file")
+        #     return False
 
-        # now remove the "chunked path" from /mnt/dane-fs/input-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234/xyz.mp4
-        try:
-            os.chdir(self.AEX_INPUT_DIR)  # cd /mnt/dane-fs/input-files
-            os.removedirs(
-                f".{input_file[len(self.AEX_INPUT_DIR):input_file.rfind(os.sep)]}"
-            )  # /03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
-            logger.info("Deleted empty input dirs too")
-        except OSError:
-            logger.exception("OSError while removing empty input file dirs")
-        except FileNotFoundError:
-            logger.exception("FileNotFoundError while removing empty input file dirs")
+        # # now remove the "chunked path" from /mnt/dane-fs/input-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234/xyz.mp4
+        # try:
+        #     os.chdir(self.DOWNLOAD_DIR)  # cd /mnt/dane-fs/input-files
+        #     os.removedirs(
+        #         f".{input_file[len(self.DOWNLOAD_DIR):input_file.rfind(os.sep)]}"
+        #     )  # /03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
+        #     logger.info("Deleted empty input dirs too")
+        # except OSError:
+        #     logger.exception("OSError while removing empty input file dirs")
+        # except FileNotFoundError:
+        #     logger.exception("FileNotFoundError while removing empty input file dirs")
 
         return True  # return True even if empty dirs were not removed
 
@@ -320,9 +261,8 @@ class AudioExtractionWorker(base_worker):
         self,
         doc: Document,
         task: Task,
-        transcript: List[ParsedResult],
-        asr_output_dir: str,
-        provenance: ASRProvenance = None,
+        visxp_output_dir: str,
+        # provenance: ASRProvenance = None,
     ) -> None:
         logger.info("saving results to DANE, task id={0}".format(task._id))
         # TODO figure out the multiple lines per transcript (refresh my memory)
@@ -330,7 +270,7 @@ class AudioExtractionWorker(base_worker):
             self.generator,
             payload={
                 # "transcript": transcript,
-                # "asr_output_dir": asr_output_dir,
+                # "visxp_output_dir": visxp_output_dir,
                 # "doc_id": doc._id,
                 # "task_id": task._id if task else None,  # TODO add this as well
                 # "doc_target_id": doc.target["id"],
@@ -355,8 +295,8 @@ class AudioExtractionWorker(base_worker):
         logger.info("working with this asset ID {}".format(asset_id))
         return asset_id
 
-    def get_aex_output_dir(self, asset_id: str) -> str:
-        return os.path.join(self.AEX_OUTPUT_DIR, asset_id)
+    def get_visxp_output_dir(self, asset_id: str) -> str:
+        return os.path.join(self.VISXP_OUTPUT_DIR, asset_id)
 
     """----------------------------------DOWNLOAD FUNCTIONS ---------------------------------"""
 
@@ -370,7 +310,7 @@ class AudioExtractionWorker(base_worker):
         fn = os.path.basename(urlparse(doc.target["url"]).path)
         # fn = unquote(fn)
         # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
-        output_file = os.path.join(self.AEX_INPUT_DIR, fn)
+        output_file = os.path.join(self.DOWNLOAD_DIR, fn)
         logger.info("saving to file {}".format(fn))
 
         # download if the file is not present (preventing unnecessary downloads)
@@ -388,12 +328,7 @@ class AudioExtractionWorker(base_worker):
 
     def fetch_downloaded_content(self, doc: Document) -> Optional[DownloadResult]:
         logger.info("checking download worker output")
-        downloader_type = self.__get_downloader_type()
-        if not downloader_type:
-            logger.warning("BG_DOWNLOAD or DOWNLOAD type must be configured")
-            return None
-
-        possibles = self.handler.searchResult(doc._id, downloader_type)
+        possibles = self.handler.searchResult(doc._id, self.DANE_DOWNLOAD_TASK_KEY)
         logger.info(possibles)
         # NOTE now MUST use the latest dane-beng-download-worker or dane-download-worker
         if len(possibles) > 0 and "file_path" in possibles[0].payload:
@@ -409,7 +344,7 @@ class AudioExtractionWorker(base_worker):
 
 # Start the worker
 if __name__ == "__main__":
-    w = AsrWorker(cfg)
+    w = VideoSegmentationWorker(cfg)
     try:
         w.run()
     except ChannelClosedByBroker:
