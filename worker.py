@@ -21,7 +21,7 @@ NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLD
 
 - /mnt/dane-fs/output-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
 
-Instead we put the ASR in:
+Instead we put the output in:
 
 - /mnt/dane-fs/output-files/visxp_prep/{asset-id}
 """

@@ -116,6 +116,8 @@ def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
         return round(frame_index / fps * 1000)
 
 
+# NOTE might be replaced with:
+# ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=r_frame_rate testob.mp4
 def _get_fps(media_file):
     return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FPS)
 

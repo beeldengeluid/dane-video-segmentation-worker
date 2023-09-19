@@ -12,6 +12,10 @@ dane = "^0.3.8"
 yacs = "^0.1.8"
 pika = "^1.3.2"
 requests = "^2.31.0"
+opencv-python = "^4.8.0.76"
+pydub = "^0.25.1"
+tensorflow = "^2.13.0"
+tensorflow-io-gcs-filesystem = { version = "*", python = ">=3.10,<3.12" }
 
 
 [tool.poetry.group.dev.dependencies]
