@@ -1,2 +1,10 @@
 *.mp4
 /config-local.yml
+/data
+__pycache__
+.coverage
+.flake8
+/config
+/config.yml
+pyproject.toml
+poetry.lock

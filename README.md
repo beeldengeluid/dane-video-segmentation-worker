@@ -1,14 +1,19 @@
 # dane-video-segmentation-worker
+
 Running hecate to extract keyframes
-Including code for audio extraction and generating spectrogram
-
-## dane-audio-extraction-worker
+Including code for audio extraction and generating spectrogra
 
 
-`src/util` bevat twee classes, waarvan `AudioExtractorUtil.py` de file is met specifieke functies voor VisXP. Daarnaast
-is er de `FfMpegUtil.py` met daarin de meer generieke ffMpeg functies.
-De `Pipfile` is wellicht niet volledig, maar kan gebruikt worden om het juiste ffmpeg python package te installeren. 
+## Installation
 
-Daarnaast moet er op de container ffmpeg worden geïnstalleerd, zoals bijv. (in mijn WSL/Ubuntu): `sudo apt install ffmpeg`
+```sh
+poetry install
+```
 
-Contact: wmelder@beeldengeluid.nl
+Installing `python-opencv` in a virtualenv, and thus not as a system package, could cause certain shared-objects to be missing. So far it seems libgl1 might be missing this way. Install it using:
+
+```
+apt-get install libgl1
+```
+
+(also see: https://stackoverflow.com/questions/64664094/i-cannot-use-opencv2-and-received-importerror-libgl-so-1-cannot-open-shared-obj)
