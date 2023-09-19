@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: debian:buster-slim
+    runs-on: ubuntu-latest
 
     steps:
     - name: "Checkout Repository"
@@ -25,8 +25,8 @@ jobs:
     - name: install libgl1
       run: sudo apt-get install -y libgl1
 
-    - name: install ffmpeg
-      run: sudo apt-get install -y ffmpeg --fix-missing
+    # - name: install ffmpeg
+    #   run: sudo apt-get install -y ffmpeg --fix-missing
 
     - name: "test"
       run: poetry run pytest
