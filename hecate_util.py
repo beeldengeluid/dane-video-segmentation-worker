@@ -10,10 +10,10 @@ hecate_path = "/hecate/distribute/bin/hecate"
 def detect_shots_and_keyframes(
     media_file: str,
 ) -> tuple[list[tuple[int, ...]], list[int]]:
-    cmd = f"{hecate_path} \
-            -i {media_file} \
-            --print_shot_info \
-            --print_keyfrm_info"
+    cmd = (f"{hecate_path}"
+           f"-i {media_file}"
+           f"--print_shot_info"
+           f"--print_keyfrm_info")
     # TODO: filter video according to optional timestamps in url
     try:
         hecate_result = base_util.run_shell_command(cmd).decode()

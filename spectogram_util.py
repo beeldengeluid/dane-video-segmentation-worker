@@ -108,9 +108,9 @@ def raw_audio_to_spectograms(
     for keyframe in keyframe_timestamps:
         # TODO: edge case if keyframe is very close to start/end video
         logger.info(
-            f"Extracting window at {keyframe} ms. \
-                 Frames {(keyframe-window_size_ms//2) * frame_rate//1000} \
-                    to {(keyframe+window_size_ms//2) * frame_rate//1000}"
+            f"Extracting window at {keyframe} ms. "
+            f"Frames {(keyframe-window_size_ms//2) * frame_rate//1000}"
+            f"to {(keyframe+window_size_ms//2) * frame_rate//1000}."
         )
         fns = []
         spectogram = raw_audio_to_spectrogram(

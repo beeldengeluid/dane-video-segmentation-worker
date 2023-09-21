@@ -33,8 +33,8 @@ def generate_input_for_feature_extraction(
             shot_indices, keyframe_indices = hecate_util.detect_shots_and_keyframes(
                 media_file=input_file_path
             )
-            logger.info(f"Detected {len(keyframe_indices)} keyframes \
-                        and {len(shot_indices)} shots.")
+            logger.info(f"Detected {len(keyframe_indices)} keyframes"
+                        f"and {len(shot_indices)} shots.")
         except Exception:
             logger.info("Could not obtain shots and keyframes. Exit.")
             sys.exit()
@@ -96,8 +96,9 @@ def generate_input_for_feature_extraction(
         )
         spectogram_provenance = Provenance(
             activity_name="Spectogram extraction",
-            activity_description="Extract audio spectogram (Numpy array) \
-                corresponding to 1 sec. of audio around each listed keyframe",
+            activity_description=(
+                "Extract audio spectogram (Numpy array)"
+                "corresponding to 1 sec. of audio around each listed keyframe"),
             start_time_unix=start_time_spectograms,
             processing_time_ms=time() - start_time_spectograms,
             input={'input_file_path': input_file_path,
@@ -109,8 +110,9 @@ def generate_input_for_feature_extraction(
 
     provenance = Provenance(
         activity_name="VisXP prep",
-        activity_description="Detect shots and keyframes, \
-        extract keyframes and corresponding audio spectograms",
+        activity_description=(
+            "Detect shots and keyframes, "
+            "extract keyframes and corresponding audio spectograms"),
         start_time_unix=start_time,
         processing_time_ms=start_time - time(),
         parameters=cfg.VISXP_PREP,
@@ -127,6 +129,7 @@ def generate_input_for_feature_extraction(
 
     with open('/data/provenance.json', 'w') as f:
         f.write(str(provenance.to_json()))
+    logger.info('Wrote provenance info to file: /data/provenance.json')
 
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
 
@@ -150,14 +153,14 @@ def _obtain_software_versions(software_names):
             assert len(urls) == len(software_names)
             return urls
     except FileNotFoundError:
-        logger.info(f"Could not read {software_names} version \
-                    from file /software_provenance.txt: file does not exist")
+        logger.info(f"Could not read {software_names} version"
+                    f"from file /software_provenance.txt: file does not exist")
     except ValueError as e:
-        logger.info(f"Could not parse {software_names} version \
-                    from file /software_provenance.txt. {e}")
+        logger.info(f"Could not parse {software_names} version"
+                    f"from file /software_provenance.txt. {e}")
     except AssertionError:
-        logger.info(f"Could not find {software_names} version \
-                    in file /software_provenance.txt")
+        logger.info(f"Could not find {software_names} version"
+                    f"in file /software_provenance.txt")
 
 
 def _read_from_file(metadata_file):
