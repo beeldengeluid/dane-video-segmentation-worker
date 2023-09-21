@@ -45,7 +45,7 @@ def interpret_hecate_output(
 
 def write_to_file(shots, keyframes, metadata_dir, fps):
     shots_times_path = os.path.join(metadata_dir, "shot_boundaries_timestamps_ms.txt")
-    keyframe_indices_path = os.path.join(metadata_dir, "keyframe_indices.txt")
+    keyframe_indices_path = os.path.join(metadata_dir, "keyframes_indices.txt")
     keyframe_times_path = os.path.join(metadata_dir, "keyframes_timestamps_ms.txt")
     with open(shots_times_path, "w",) as f:
         f.write(
