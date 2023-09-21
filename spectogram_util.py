@@ -108,8 +108,11 @@ def raw_audio_to_spectograms(
     for keyframe in keyframe_timestamps:
         # TODO: edge case if keyframe is very close to start/end video
         logger.info(
-            f"Extracting window at {keyframe} ms. Frames {(keyframe-window_size_ms//2) * frame_rate//1000} to {(keyframe+window_size_ms//2) * frame_rate//1000}"
+            f"Extracting window at {keyframe} ms. \
+                 Frames {(keyframe-window_size_ms//2) * frame_rate//1000} \
+                    to {(keyframe+window_size_ms//2) * frame_rate//1000}"
         )
+        fns = []
         spectogram = raw_audio_to_spectrogram(
             raw_audio[
                 :,
@@ -126,6 +129,8 @@ def raw_audio_to_spectograms(
         spec_path = os.path.join(location, f"{keyframe}.npz")
         out_dict = {"audio": spectogram}
         np.savez(spec_path, out_dict)  # type: ignore
+        fns.append(spec_path)
+    return fns
 
 
 def extract_audio_spectograms(
@@ -136,8 +141,9 @@ def extract_audio_spectograms(
         media_file=media_file, target_location=os.path.join(tmp_location, "output.wav")
     )
     logger.info("obtain spectograms")
-    raw_audio_to_spectograms(
+    fns = raw_audio_to_spectograms(
         wav_to_raw_audio(os.path.join(tmp_location, "output.wav")),
         keyframe_timestamps=keyframe_timestamps,
         location=location,
     )
+    return fns
