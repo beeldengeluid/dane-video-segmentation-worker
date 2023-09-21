@@ -176,7 +176,8 @@ class VideoSegmentationWorker(base_worker):
             input={},
             output={'file_path': download_result.file_path}
         )
-
+        if not provenance.steps:
+            provenance.steps = []
         provenance.steps.append(download_provenance)
 
         input_file = download_result.file_path
@@ -279,7 +280,6 @@ class VideoSegmentationWorker(base_worker):
         task: Task,
         visxp_output_dir: str,
         provenance: Provenance,
-        # provenance: ASRProvenance = None,
     ) -> None:
         logger.info("saving results to DANE, task id={0}".format(task._id))
         # TODO figure out the multiple lines per transcript (refresh my memory)
