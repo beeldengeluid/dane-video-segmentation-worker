@@ -179,8 +179,6 @@ if __name__ == "__main__":
         format=LOG_FORMAT,
     )
     logger = logging.getLogger()
-    
-    _obtain_software_versions(['hecate'])
 
     if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
         generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
