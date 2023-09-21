@@ -63,7 +63,7 @@ def generate_input_for_feature_extraction(
         logger.info("Extracting keyframe images now.")
         if keyframe_indices is None:
             keyframe_indices = _read_from_file(
-                os.path.join(output_dirs["metadata"], "keyframe_indices.txt"))
+                os.path.join(output_dirs["metadata"], "keyframes_indices.txt"))
         keyframe_files = keyframe_util.extract_keyframes(
             media_file=input_file_path,
             keyframe_indices=keyframe_indices,
@@ -85,7 +85,7 @@ def generate_input_for_feature_extraction(
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
         if keyframe_timestamps is None:
             keyframe_timestamps = _read_from_file(
-                os.path.join(output_dirs["metadata"], "keyframe_timestamps.txt"))
+                os.path.join(output_dirs["metadata"], "keyframes_timestamps_ms.txt"))
         start_time_spectograms = time()
         logger.info("Extracting audio spectograms now.")
         spectogram_files = spectogram_util.extract_audio_spectograms(
@@ -101,7 +101,7 @@ def generate_input_for_feature_extraction(
             start_time_unix=start_time_spectograms,
             processing_time_ms=time() - start_time_spectograms,
             input={'input_file_path': input_file_path,
-                   keyframe_timestamps: str(keyframe_timestamps)},
+                   'keyframe_timestamps': str(keyframe_timestamps)},
             output={'spectogram_files': str(spectogram_files)}
         )
     else:
@@ -117,13 +117,17 @@ def generate_input_for_feature_extraction(
         steps=[prov for prov in
                [hecate_provenance, keyframe_provenance, spectogram_provenance]
                if prov is not None],
-        software_version=_obtain_software_versions('dane-video-segmentation-worker'),
+        software_version=_obtain_software_versions(['dane-video-segmentation-worker']),
         input={'input_file_path': input_file_path},
         output=reduce(lambda a, b: {**a, **b},
                       [prov.output for prov in
                        [hecate_provenance, keyframe_provenance, spectogram_provenance]
                        if prov is not None])
     )
+
+    with open('/data/provenance.json', 'w') as f:
+        f.write(str(provenance.to_json()))
+
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
 
 
@@ -134,19 +138,26 @@ def _get_fps(media_file):
 
 
 def _obtain_software_versions(software_names):
+    if isinstance(software_names, str):  # wrap a single software name in a list
+        software_names = [software_names]
     try:
         with open('/software_provenance.txt') as f:
-            urls = {name: url for line in f.readlines()
-                    for name, url in line.split(';')
-                    if name in software_names}
+            urls = {}  # for some reason I couldnt manage a working comprehension for the below - SV
+            for line in f.readlines():
+                name, url = line.split(';')
+                if name.strip() in software_names:
+                    urls[name.strip()] = url.strip()
             assert len(urls) == len(software_names)
+            return urls
     except FileNotFoundError:
         logger.info(f"Could not read {software_names} version \
                     from file /software_provenance.txt: file does not exist")
+    except ValueError as e:
+        logger.info(f"Could not parse {software_names} version \
+                    from file /software_provenance.txt. {e}")
     except AssertionError:
         logger.info(f"Could not find {software_names} version \
                     in file /software_provenance.txt")
-    return urls
 
 
 def _read_from_file(metadata_file):
@@ -165,6 +176,10 @@ if __name__ == "__main__":
         format=LOG_FORMAT,
     )
     logger = logging.getLogger()
+    
+    _obtain_software_versions(['hecate'])
+
     if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
         generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
-    logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
+    else:
+        logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
