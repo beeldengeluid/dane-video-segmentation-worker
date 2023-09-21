@@ -18,7 +18,7 @@ class Provenance:
         return {
             "activity_name": self.activity_name,
             "activity_description": self.activity_description,
-            "processing_time": self.processing_time,
+            "processing_time_ms": self.processing_time_ms,
             "start_time_unix": self.start_time_unix,
             "parameters": self.parameters,  # .to_json
             "software_version": self.software_version,  # .to_json
