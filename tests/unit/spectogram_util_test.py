@@ -74,7 +74,7 @@ def generate_example_output(media_file: str, output_path: str):
     # Compute spectrogram for each chunk
     spectrograms = []
     for chunk in chunks:
-        spectrograms.append(raw_audio_to_spectrogram(chunk))
+        spectrograms.append(raw_audio_to_spectrogram(chunk, sample_rate=48000))
 
     # Save spectrogram to file
     for i, spectrogram in enumerate(spectrograms):
@@ -127,6 +127,7 @@ def test_extract_audio_spectograms(
         keyframe_timestamps=keyframe_timestamps,
         location=tmp_location,
         tmp_location=tmp_location,
+        sample_rate=48000,
     )
     for i, timestamp in enumerate(keyframe_timestamps):
         # Load example spectogram (following https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py)
