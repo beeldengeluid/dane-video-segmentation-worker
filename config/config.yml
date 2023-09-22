@@ -32,6 +32,9 @@ VISXP_PREP:
     RUN_HECATE: true
     RUN_KEYFRAME_EXTRACTION: true
     RUN_AUDIO_EXTRACTION: true
+    SPECTOGRAM_SAMPLERATE_HZ: 
+      - 24000
+      - 48000
     TEST_INPUT_FILE: /data/testob.mp4  # or null
 INPUT:
     DELETE_ON_COMPLETION: True
