@@ -119,7 +119,7 @@ def raw_audio_to_spectograms(
                 * sample_rate
                 // 1000,
             ],
-            sample_rate=sample_rate
+            sample_rate=sample_rate,
         )
         logger.info(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
@@ -130,19 +130,22 @@ def raw_audio_to_spectograms(
 
 
 def extract_audio_spectograms(
-    media_file: str, keyframe_timestamps: list[int], location: str, tmp_location: str,
+    media_file: str,
+    keyframe_timestamps: list[int],
+    location: str,
+    tmp_location: str,
     sample_rate: int = 48000,
 ):
     logger.info(f"Convert to wav at {sample_rate}Hz.")
     convert_audiobit_to_wav(
-        media_file=media_file, 
+        media_file=media_file,
         target_location=os.path.join(tmp_location, f"output_{sample_rate}.wav"),
-        sample_rate=sample_rate
+        sample_rate=sample_rate,
     )
     logger.info("obtain spectograms")
     raw_audio_to_spectograms(
         wav_to_raw_audio(os.path.join(tmp_location, f"output_{sample_rate}.wav")),
         keyframe_timestamps=keyframe_timestamps,
         location=location,
-        sample_rate=sample_rate
+        sample_rate=sample_rate,
     )

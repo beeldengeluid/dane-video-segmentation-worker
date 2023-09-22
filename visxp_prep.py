@@ -86,7 +86,9 @@ def generate_input_for_feature_extraction(
         ) as f:
             keyframe_timestamps = eval(f.read())
             logger.debug(keyframe_timestamps)
-        logger.info(f"Extracting audio spectograms for {len(keyframe_timestamps)} keyframes.")
+        logger.info(
+            f"Extracting audio spectograms for {len(keyframe_timestamps)} keyframes."
+        )
         sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
         for sample_rate in sample_rates:
             logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
@@ -95,7 +97,7 @@ def generate_input_for_feature_extraction(
                 keyframe_timestamps=keyframe_timestamps,
                 location=output_dirs["spectograms"],
                 tmp_location=output_dirs["tmp"],
-                sample_rate=sample_rate
+                sample_rate=sample_rate,
             )
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
 
