@@ -10,6 +10,9 @@ from dane.config import cfg
 from dataclasses import dataclass
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass
 class VisXPFeatureExtractionInput:
     state: int
@@ -119,10 +122,11 @@ def _filter_edge_keyframes(keyframe_indices, fps, framecount):
     half_window = cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS / 2000 * fps
     logger.info(f'Half a window corresponds to {half_window} frames.')
     logger.info(f'Clip consists of {framecount} frames.')
-    logger.info(f'Omitting frames 0-{half_window} and {framecount-half_window}-{framecount}')
+    logger.info(f'Omitting frames 0-{half_window} and'
+                f'{framecount-half_window}-{framecount}')
     filtered = [
         keyframe_i for keyframe_i in keyframe_indices
-        if keyframe_i > half_window and keyframe_i > framecount - half_window]
+        if keyframe_i > half_window and keyframe_i < framecount - half_window]
     logger.info(f'Filtered out {len(keyframe_indices)-len(filtered)} edge keyframes')
     return filtered
 
@@ -150,7 +154,7 @@ if __name__ == "__main__":
         stream=sys.stdout,  # configure a stream handler only for now (single handler)
         format=LOG_FORMAT,
     )
-    logger = logging.getLogger()
+    
     if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
         generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
     logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
