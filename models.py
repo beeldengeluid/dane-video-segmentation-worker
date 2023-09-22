@@ -12,7 +12,7 @@ class Provenance:
     output: dict[str, str]
     parameters: Optional[dict] = None
     software_version: Optional[dict[str, str]] = None
-    steps: Optional[list['Provenance']] = None  # a list of subactivity provenance items
+    steps: Optional[list["Provenance"]] = None  # a list of subactivity provenance items
 
     def to_json(self):
         return {
@@ -24,7 +24,7 @@ class Provenance:
             "software_version": self.software_version,  # .to_json
             "input": self.input,  # .to_json
             "output": self.output,  # .to_json
-            "steps": [step.to_json for step in self.steps]
+            "steps": [step.to_json for step in self.steps],
         }
 
 

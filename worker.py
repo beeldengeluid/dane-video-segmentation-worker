@@ -151,7 +151,7 @@ class VideoSegmentationWorker(base_worker):
             start_time_unix=time(),
             processing_time_ms=-1,
             input={},
-            output={}
+            output={},
         )
 
         # step 1: try to fetch the content via the configured DANE download worker
@@ -174,7 +174,7 @@ class VideoSegmentationWorker(base_worker):
             start_time_unix=-1,
             processing_time_ms=download_result.download_time * 1000,
             input={},
-            output={'file_path': download_result.file_path}
+            output={"file_path": download_result.file_path},
         )
         if not provenance.steps:
             provenance.steps = []
@@ -230,7 +230,7 @@ class VideoSegmentationWorker(base_worker):
             doc,
             task,
             visxp_output_dir,  # TODO adapt function and pass whatever is neccesary for VisXP
-            provenance=provenance
+            provenance=provenance,
         )
         return {
             "state": 200,
