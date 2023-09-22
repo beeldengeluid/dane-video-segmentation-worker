@@ -154,7 +154,7 @@ if __name__ == "__main__":
         stream=sys.stdout,  # configure a stream handler only for now (single handler)
         format=LOG_FORMAT,
     )
-    
+
     if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
         generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
     logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
