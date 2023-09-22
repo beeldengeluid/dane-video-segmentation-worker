@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 def make_spectrogram(
     audio,  # some waveform of shape 1 x n_samples, tensorflow tensor
+    mel_sample_rate,
     stft_length=2048,
     stft_step=1024,
     stft_pad_end=True,
     use_mel=True,
     mel_lower_edge_hertz=80.0,
     mel_upper_edge_hertz=7600.0,
-    mel_sample_rate=48000.0,
     mel_num_bins=40,
     use_log=True,
     log_eps=1.0,
@@ -37,7 +37,7 @@ def make_spectrogram(
         linear_to_mel_weight_matrix = tf.signal.linear_to_mel_weight_matrix(
             mel_num_bins,
             num_spectrogram_bins,
-            mel_sample_rate,
+            float(mel_sample_rate),
             mel_lower_edge_hertz,
             mel_upper_edge_hertz,
         )
@@ -53,7 +53,7 @@ def make_spectrogram(
 
 def raw_audio_to_spectrogram(
     raw_audio,  # some waveform of shape 1 x n_samples, tensorflow tensor
-    sample_rate=48000,
+    sample_rate,
     stft_length=0.032,
     stft_step=0.016,
     mel_bins=80,
@@ -86,11 +86,9 @@ def wav_to_raw_audio(wav_file_location: str):
     return raw_audio
 
 
-def convert_audiobit_to_wav(
-    media_file: str, target_location: str, frame_rate: int = 48000
-):
+def convert_audiobit_to_wav(media_file: str, target_location: str, sample_rate: int):
     audio = AudioSegment.from_file(media_file)
-    audio.set_frame_rate(frame_rate)
+    audio.set_frame_rate(sample_rate)
     audio.export(target_location, format="wav")
 
 
@@ -98,7 +96,7 @@ def raw_audio_to_spectograms(
     raw_audio: np.ndarray,
     keyframe_timestamps: list[int],  # ms timestamps
     location: str,
-    frame_rate: int = 48000,
+    sample_rate,
     window_size_ms: int = 1000,
 ):
     # margin = int(
@@ -108,36 +106,43 @@ def raw_audio_to_spectograms(
     for keyframe in keyframe_timestamps:
         # TODO: edge case if keyframe is very close to start/end video
         logger.info(
-            f"Extracting window at {keyframe} ms. Frames {(keyframe-window_size_ms//2) * frame_rate//1000} to {(keyframe+window_size_ms//2) * frame_rate//1000}"
+            f"Extracting window at {keyframe} ms. "
+            f"Frames {(keyframe-window_size_ms//2) * sample_rate//1000} "
+            f"to {(keyframe+window_size_ms//2) * sample_rate//1000}."
         )
         spectogram = raw_audio_to_spectrogram(
             raw_audio[
                 :,
                 (keyframe - window_size_ms // 2)
-                * frame_rate
+                * sample_rate
                 // 1000 : (keyframe + window_size_ms // 2)
-                * frame_rate
+                * sample_rate
                 // 1000,
-            ]
+            ],
+            sample_rate=sample_rate
         )
         logger.info(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
         )
-        spec_path = os.path.join(location, f"{keyframe}.npz")
+        spec_path = os.path.join(location, f"{keyframe}_{sample_rate}.npz")
         out_dict = {"audio": spectogram}
         np.savez(spec_path, out_dict)  # type: ignore
 
 
 def extract_audio_spectograms(
-    media_file: str, keyframe_timestamps: list[int], location: str, tmp_location: str
+    media_file: str, keyframe_timestamps: list[int], location: str, tmp_location: str,
+    sample_rate: int = 48000,
 ):
-    logger.info("Convert to wav.")
+    logger.info(f"Convert to wav at {sample_rate}Hz.")
     convert_audiobit_to_wav(
-        media_file=media_file, target_location=os.path.join(tmp_location, "output.wav")
+        media_file=media_file, 
+        target_location=os.path.join(tmp_location, f"output_{sample_rate}.wav"),
+        sample_rate=sample_rate
     )
     logger.info("obtain spectograms")
     raw_audio_to_spectograms(
-        wav_to_raw_audio(os.path.join(tmp_location, "output.wav")),
+        wav_to_raw_audio(os.path.join(tmp_location, f"output_{sample_rate}.wav")),
         keyframe_timestamps=keyframe_timestamps,
         location=location,
+        sample_rate=sample_rate
     )
