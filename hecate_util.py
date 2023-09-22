@@ -10,10 +10,9 @@ hecate_path = "/hecate/distribute/bin/hecate"
 def detect_shots_and_keyframes(
     media_file: str,
 ) -> tuple[list[tuple[int, ...]], list[int]]:
-    cmd = (f"{hecate_path}"
-           f"-i {media_file}"
-           f"--print_shot_info"
-           f"--print_keyfrm_info")
+    cmd = (
+        f"{hecate_path}" f"-i {media_file}" f"--print_shot_info" f"--print_keyfrm_info"
+    )
     # TODO: filter video according to optional timestamps in url
     try:
         hecate_result = base_util.run_shell_command(cmd).decode()
@@ -47,7 +46,10 @@ def write_to_file(shots, keyframes, metadata_dir, fps):
     shots_times_path = os.path.join(metadata_dir, "shot_boundaries_timestamps_ms.txt")
     keyframe_indices_path = os.path.join(metadata_dir, "keyframes_indices.txt")
     keyframe_times_path = os.path.join(metadata_dir, "keyframes_timestamps_ms.txt")
-    with open(shots_times_path, "w",) as f:
+    with open(
+        shots_times_path,
+        "w",
+    ) as f:
         f.write(
             str(
                 [
@@ -64,9 +66,11 @@ def write_to_file(shots, keyframes, metadata_dir, fps):
         f.write(str(keyframes))
     with open(keyframe_times_path, "w") as f:
         f.write(str([_frame_index_to_timecode(i, fps) for i in keyframes]))
-    return {'shot_boundaires': shots_times_path,
-            'keyframe_indices': keyframe_indices_path,
-            'keyframes_timestamps': keyframe_times_path}
+    return {
+        "shot_boundaires": shots_times_path,
+        "keyframe_indices": keyframe_indices_path,
+        "keyframes_timestamps": keyframe_times_path,
+    }
 
 
 def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
