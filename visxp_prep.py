@@ -49,7 +49,8 @@ def generate_input_for_feature_extraction(
         keyframes = _filter_edge_keyframes(
             keyframe_indices=keyframes,
             fps=fps,
-            framecount=_get_framecount(input_file_path))
+            framecount=_get_framecount(input_file_path),
+        )
 
         with open(
             os.path.join(output_dirs["metadata"], "shot_boundaries_timestamps_ms.txt"),
@@ -112,7 +113,7 @@ def generate_input_for_feature_extraction(
             ],
             location=output_dirs["spectograms"],
             tmp_location=output_dirs["tmp"],
-            window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS
+            window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
         )
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
 
@@ -120,14 +121,17 @@ def generate_input_for_feature_extraction(
 def _filter_edge_keyframes(keyframe_indices, fps, framecount):
     # compute number of frames that should exist on either side of the keyframe
     half_window = cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS / 2000 * fps
-    logger.info(f'Half a window corresponds to {half_window} frames.')
-    logger.info(f'Clip consists of {framecount} frames.')
-    logger.info(f'Omitting frames 0-{half_window} and'
-                f'{framecount-half_window}-{framecount}')
+    logger.info(f"Half a window corresponds to {half_window} frames.")
+    logger.info(f"Clip consists of {framecount} frames.")
+    logger.info(
+        f"Omitting frames 0-{half_window} and" f"{framecount-half_window}-{framecount}"
+    )
     filtered = [
-        keyframe_i for keyframe_i in keyframe_indices
-        if keyframe_i > half_window and keyframe_i < framecount - half_window]
-    logger.info(f'Filtered out {len(keyframe_indices)-len(filtered)} edge keyframes')
+        keyframe_i
+        for keyframe_i in keyframe_indices
+        if keyframe_i > half_window and keyframe_i < framecount - half_window
+    ]
+    logger.info(f"Filtered out {len(keyframe_indices)-len(filtered)} edge keyframes")
     return filtered
 
 
