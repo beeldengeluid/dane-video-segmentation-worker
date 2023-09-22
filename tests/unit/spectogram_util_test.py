@@ -41,14 +41,14 @@ def cleanup_output(source_id: str):
 
 
 # Copied from https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py
-def generate_example_output(media_file: str, output_path: str):
+def generate_example_output(media_file: str, output_path: str, frame_rate: int = 48000):
     import wave
     import numpy as np
     from pydub import AudioSegment
 
     # Convert MP4 to WAV
     audio = AudioSegment.from_file(media_file)
-    audio.set_frame_rate(48000)
+    audio.set_frame_rate(frame_rate)
     wav_fn = os.path.join(output_path, "output.wav")
     audio.export(wav_fn, format="wav")
 
@@ -62,7 +62,7 @@ def generate_example_output(media_file: str, output_path: str):
 
     # Segment audio into 1 second chunks
     n_samples = raw_audio.shape[1]
-    n_samples_per_second = 48000
+    n_samples_per_second = frame_rate
     n_samples_per_chunk = n_samples_per_second
     n_chunks = int(n_samples / n_samples_per_chunk)
     chunks = []
@@ -74,22 +74,13 @@ def generate_example_output(media_file: str, output_path: str):
     # Compute spectrogram for each chunk
     spectrograms = []
     for chunk in chunks:
-        spectrograms.append(raw_audio_to_spectrogram(chunk, sample_rate=48000))
+        spectrograms.append(raw_audio_to_spectrogram(chunk, sample_rate=frame_rate))
 
     # Save spectrogram to file
     for i, spectrogram in enumerate(spectrograms):
         spec_path = os.path.join(output_path, f"{i}.npz")
         out_dict = {"audio": spectrogram}
         np.savez(spec_path, out_dict)  # type: ignore
-
-
-def assert_example_output(output_path: str, n_files: int):
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-    for i in range(n_files):
-        if not os.path.isfile(os.path.join(output_path, f"{i}.npz")):
-            return False
-    return True
 
 
 @pytest.mark.parametrize(
@@ -119,15 +110,17 @@ def test_extract_audio_spectograms(
     media_file = to_input_file(source_id)
     output_path = to_output_dir(source_id)
 
-    if not assert_example_output(output_path, len(keyframe_timestamps)):
-        generate_example_output(media_file, output_path)
-
+    # if not assert_example_output(output_path, len(keyframe_timestamps)):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    generate_example_output(media_file, output_path)
+    sample_rate = 48000
     extract_audio_spectograms(
         media_file=media_file,
         keyframe_timestamps=keyframe_timestamps,
         location=tmp_location,
         tmp_location=tmp_location,
-        sample_rate=48000,
+        sample_rate=sample_rate,
     )
     for i, timestamp in enumerate(keyframe_timestamps):
         # Load example spectogram (following https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py)
@@ -135,7 +128,7 @@ def test_extract_audio_spectograms(
         example_data = np.load(example_path, allow_pickle=True)
         example_spectogram = example_data["arr_0"].item()["audio"]
 
-        real_path = os.path.join(tmp_location, f"{timestamp}.npz")
+        real_path = os.path.join(tmp_location, f"{timestamp}_{sample_rate}.npz")
         real_data = np.load(real_path, allow_pickle=True)
         real_spectogram = real_data["arr_0"].item()["audio"]
 
