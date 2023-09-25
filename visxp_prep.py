@@ -96,25 +96,20 @@ def generate_input_for_feature_extraction(
         ) as f:
             keyframe_timestamps = eval(f.read())
             logger.debug(keyframe_timestamps)
-        logger.info("Extracting audio spectograms now.")
-        spectogram_util.extract_audio_spectograms(
-            media_file=input_file_path,
-            keyframe_timestamps=[
-                500,
-                1500,
-                2500,
-                3500,
-                4500,
-                5500,
-                6500,
-                7500,
-                8500,
-                9500,
-            ],
-            location=output_dirs["spectograms"],
-            tmp_location=output_dirs["tmp"],
-            window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+        logger.info(
+            f"Extracting audio spectograms for {len(keyframe_timestamps)} keyframes."
         )
+        sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
+        for sample_rate in sample_rates:
+            logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
+            spectogram_util.extract_audio_spectograms(
+                media_file=input_file_path,
+                keyframe_timestamps=keyframe_timestamps,
+                location=output_dirs["spectograms"],
+                tmp_location=output_dirs["tmp"],
+                sample_rate=sample_rate,
+                window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+            )
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
 
 
@@ -161,4 +156,5 @@ if __name__ == "__main__":
 
     if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
         generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
-    logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
+    else:
+        logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
