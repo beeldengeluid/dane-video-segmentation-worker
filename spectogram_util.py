@@ -135,6 +135,7 @@ def extract_audio_spectograms(
     location: str,
     tmp_location: str,
     sample_rate: int = 48000,
+    window_size_ms: int = 1000,
 ):
     logger.info(f"Convert to wav at {sample_rate}Hz.")
     convert_audiobit_to_wav(
@@ -148,4 +149,5 @@ def extract_audio_spectograms(
         keyframe_timestamps=keyframe_timestamps,
         location=location,
         sample_rate=sample_rate,
+        window_size_ms=window_size_ms,
     )

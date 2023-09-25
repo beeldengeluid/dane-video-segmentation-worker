@@ -28,8 +28,10 @@ jobs:
     - name: install ffmpeg
       run: sudo apt-get update && sudo apt-get install -y ffmpeg --fix-missing
 
-    - name: "test"
-      run: poetry run pytest
+    - name: "pytest"
+      run: |
+        cp config/config.yml config.yml
+        poetry run pytest
 
     - name: "flake8"
       run: "poetry run flake8"
