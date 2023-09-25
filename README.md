@@ -1,3 +1,5 @@
+[![main branch](https://github.com/beeldengeluid/dane-video-segmentation-worker/actions/workflows/main-branch.yml/badge.svg)](https://github.com/beeldengeluid/dane-video-segmentation-worker/actions/workflows/main-branch.yml)
+
 # dane-video-segmentation-worker
 
 Running hecate to detect shots and keyframes.
