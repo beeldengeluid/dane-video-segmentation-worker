@@ -10,6 +10,9 @@ from dane.config import cfg
 from dataclasses import dataclass
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass
 class VisXPFeatureExtractionInput:
     state: int
@@ -42,6 +45,13 @@ def generate_input_for_feature_extraction(
             sys.exit()
         fps = _get_fps(input_file_path)
         logger.info(f"Framerate is {fps}.")
+
+        keyframes = _filter_edge_keyframes(
+            keyframe_indices=keyframes,
+            fps=fps,
+            framecount=_get_framecount(input_file_path),
+        )
+
         with open(
             os.path.join(output_dirs["metadata"], "shot_boundaries_timestamps_ms.txt"),
             "w",
@@ -58,7 +68,7 @@ def generate_input_for_feature_extraction(
                 )
             )
         with open(
-            os.path.join(output_dirs["metadata"], "keyframe_indices.txt"), "w"
+            os.path.join(output_dirs["metadata"], "keyframes_indices.txt"), "w"
         ) as f:
             f.write(str(keyframes))
         with open(
@@ -69,7 +79,7 @@ def generate_input_for_feature_extraction(
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
         logger.info("Extracting keyframe images now.")
         with open(
-            os.path.join(output_dirs["metadata"], "keyframe_indices.txt"), "r"
+            os.path.join(output_dirs["metadata"], "keyframes_indices.txt"), "r"
         ) as f:
             keyframe_indices = eval(f.read())
             logger.debug(keyframe_indices)
@@ -78,7 +88,7 @@ def generate_input_for_feature_extraction(
             keyframe_indices=keyframe_indices,
             out_dir=output_dirs["keyframes"],
         )
-        logger.info(f"Extracted {len(keyframes)} keyframes.")
+        logger.info(f"Extracted {len(keyframe_indices)} keyframes.")
 
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
         with open(
@@ -103,13 +113,35 @@ def generate_input_for_feature_extraction(
             ],
             location=output_dirs["spectograms"],
             tmp_location=output_dirs["tmp"],
+            window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
         )
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
+
+
+def _filter_edge_keyframes(keyframe_indices, fps, framecount):
+    # compute number of frames that should exist on either side of the keyframe
+    half_window = cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS / 2000 * fps
+    logger.info(f"Half a window corresponds to {half_window} frames.")
+    logger.info(f"Clip consists of {framecount} frames.")
+    logger.info(
+        f"Omitting frames 0-{half_window} and" f"{framecount-half_window}-{framecount}"
+    )
+    filtered = [
+        keyframe_i
+        for keyframe_i in keyframe_indices
+        if keyframe_i > half_window and keyframe_i < framecount - half_window
+    ]
+    logger.info(f"Filtered out {len(keyframe_indices)-len(filtered)} edge keyframes")
+    return filtered
 
 
 def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
     if out_format == "ms":
         return round(frame_index / fps * 1000)
+
+
+def _get_framecount(media_file):
+    return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FRAME_COUNT)
 
 
 # NOTE might be replaced with:
@@ -126,7 +158,7 @@ if __name__ == "__main__":
         stream=sys.stdout,  # configure a stream handler only for now (single handler)
         format=LOG_FORMAT,
     )
-    logger = logging.getLogger()
+
     if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
         generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
     logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
