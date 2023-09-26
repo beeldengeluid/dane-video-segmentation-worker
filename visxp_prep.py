@@ -29,6 +29,9 @@ def generate_input_for_feature_extraction(
             os.makedirs(output_dir)
         output_dirs[kind] = output_dir
 
+    hecate_provenance = None
+    keyframes_indices = None
+
     if cfg.VISXP_PREP.RUN_HECATE:
         start_time_hecate = time()
         logger.info("Detecting shots and keyframes now.")
@@ -43,13 +46,16 @@ def generate_input_for_feature_extraction(
         except Exception:
             logger.info("Could not obtain shots and keyframes. Exit.")
             sys.exit()
+
+        fps = _get_fps(input_file_path)
+
         # filter out the edge cases
         keyframes_indices = _filter_edge_keyframes(
             keyframe_indices=keyframes_indices,
             fps=fps,
             framecount=_get_framecount(input_file_path),
         )
-        fps = _get_fps(input_file_path)
+
         logger.info(f"Framerate is {fps}.")
         output_paths = hecate_util.write_to_file(
             shot_indices, keyframe_indices, output_dirs["metadata"], fps
