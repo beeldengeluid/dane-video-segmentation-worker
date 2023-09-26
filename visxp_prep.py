@@ -95,7 +95,7 @@ def generate_input_for_feature_extraction(
         )
     else:
         keyframe_provenance = None
-        
+
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
         if keyframe_timestamps is None:
             keyframe_timestamps = _read_from_file(
@@ -103,20 +103,20 @@ def generate_input_for_feature_extraction(
             )
         start_time_spectograms = time()
         logger.info("Extracting audio spectograms now.")
-        
-       sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
-       spectogram_files = []
-       for sample_rate in sample_rates:
-           logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
-           sf = spectogram_util.extract_audio_spectograms(
-               media_file=input_file_path,
-               keyframe_timestamps=keyframe_timestamps,
-               location=output_dirs["spectograms"],
-               tmp_location=output_dirs["tmp"],
-               sample_rate=sample_rate,
-               window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
-           )
-           spectogram_files.extend(sf)
+        sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
+
+        spectogram_files = []
+        for sample_rate in sample_rates:
+            logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
+            sf = spectogram_util.extract_audio_spectograms(
+                media_file=input_file_path,
+                keyframe_timestamps=keyframe_timestamps,
+                location=output_dirs["spectograms"],
+                tmp_location=output_dirs["tmp"],
+                sample_rate=sample_rate,
+                window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+            )
+            spectogram_files.extend(sf)
         spectogram_provenance = Provenance(
             activity_name="Spectogram extraction",
             activity_description=(
@@ -169,6 +169,7 @@ def generate_input_for_feature_extraction(
     logger.info("Wrote provenance info to file: /data/provenance.json")
 
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
+
 
 def _filter_edge_keyframes(keyframe_indices, fps, framecount):
     # compute number of frames that should exist on either side of the keyframe
