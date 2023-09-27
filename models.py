@@ -1,5 +1,11 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TypedDict
+
+
+# returned by callback()
+class CallbackResponse(TypedDict):
+    state: int
+    message: str
 
 
 @dataclass

@@ -1,15 +1,16 @@
 import logging
-import sys
-import hecate_util
-import keyframe_util
-import spectogram_util
 import os
+import sys
+from time import time
 from typing import Dict
+
 from base_util import get_source_id
 from dane.config import cfg
-from provenance import generate_full_provenance_chain
+import hecate
+import keyframe_extraction
 from models import VisXPFeatureExtractionInput
-from time import time
+from provenance import generate_full_provenance_chain
+import spectogram
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def generate_input_for_feature_extraction(
     spectogram_provenance = None
 
     if cfg.VISXP_PREP.RUN_HECATE:
-        hecate_provenance = hecate_util.run(input_file_path, output_dirs["metadata"])
+        hecate_provenance = hecate.run(input_file_path, output_dirs["metadata"])
 
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
         keyframe_indices = _read_from_file(
@@ -39,7 +40,7 @@ def generate_input_for_feature_extraction(
             logger.error("Could not find keyframe_indices")
             sys.exit()
 
-        keyframe_provenance = keyframe_util.run(
+        keyframe_provenance = keyframe_extraction.run(
             input_file_path, keyframe_indices, output_dirs["keyframes"]
         )
 
@@ -51,7 +52,7 @@ def generate_input_for_feature_extraction(
             logger.error("Could not find keyframe_timestamps")
             sys.exit()
 
-        spectogram_provenance = spectogram_util.run(
+        spectogram_provenance = spectogram.run(
             input_file_path,
             keyframe_timestamps,
             output_dirs["spectograms"],
@@ -85,6 +86,7 @@ def _generate_output_dirs(input_file_path: str) -> Dict[str, str]:
     return output_dirs
 
 
+# NOTE: maybe move this to base_util
 def _read_from_file(metadata_file):
     with open(metadata_file, "r") as f:
         result = eval(f.read())

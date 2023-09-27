@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import Optional
 import os
 import ntpath
 import sys
@@ -16,7 +16,7 @@ from base_util import validate_config, LOG_FORMAT
 from output_util import transfer_output, delete_local_output
 from pika.exceptions import ChannelClosedByBroker
 from visxp_prep import generate_input_for_feature_extraction
-from models import Provenance, DownloadResult
+from models import CallbackResponse, DownloadResult, Provenance
 
 """
 NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLDER is not used:
@@ -34,12 +34,6 @@ logging.basicConfig(
     format=LOG_FORMAT,
 )
 logger = logging.getLogger()
-
-
-# returned by callback()
-class CallbackResponse(TypedDict):
-    state: int
-    message: str
 
 
 class VideoSegmentationWorker(base_worker):

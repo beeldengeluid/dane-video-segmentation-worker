@@ -1,4 +1,4 @@
-from hecate_util import filter_edge_keyframes
+from hecate import filter_edge_keyframes
 
 
 def test_filter_edge_keyframes():

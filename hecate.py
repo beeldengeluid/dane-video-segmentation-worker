@@ -4,7 +4,7 @@ import os
 import sys
 from models import Provenance
 from time import time
-from keyframe_util import get_fps, get_framecount, frame_index_to_timecode
+from keyframe_extraction import get_fps, get_framecount, frame_index_to_timecode
 from dane.config import cfg
 from provenance import obtain_software_versions
 

@@ -1,6 +1,6 @@
 import pytest
 import shutil
-from spectogram_util import extract_audio_spectograms, raw_audio_to_spectrogram
+from spectogram import extract_audio_spectograms, raw_audio_to_spectrogram
 import os
 from base_util import get_source_id
 import numpy as np
