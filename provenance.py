@@ -42,7 +42,7 @@ def generate_full_provenance_chain(
     return provenance
 
 
-# TODO not sure yet where the software_provenance.txt is generated
+# NOTE: software_provenance.txt is created while building the container image (see Dockerfile)
 def obtain_software_versions(software_names):
     if isinstance(software_names, str):  # wrap a single software name in a list
         software_names = [software_names]
