@@ -3,13 +3,12 @@ import sys
 import hecate_util
 import keyframe_util
 import spectogram_util
-import cv2  # type: ignore
 import os
-from typing import Dict, List
+from typing import Dict
 from base_util import get_source_id
 from dane.config import cfg
-from models import Provenance, VisXPFeatureExtractionInput
-from functools import reduce
+from provenance import generate_full_provenance_chain
+from models import VisXPFeatureExtractionInput
 from time import time
 
 
@@ -30,7 +29,7 @@ def generate_input_for_feature_extraction(
     spectogram_provenance = None
 
     if cfg.VISXP_PREP.RUN_HECATE:
-        hecate_provenance = _run_hecate(input_file_path, output_dirs["metadata"])
+        hecate_provenance = hecate_util.run(input_file_path, output_dirs["metadata"])
 
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
         keyframe_indices = _read_from_file(
@@ -40,7 +39,7 @@ def generate_input_for_feature_extraction(
             logger.error("Could not find keyframe_indices")
             sys.exit()
 
-        keyframe_provenance = _run_keyframe_extraction(
+        keyframe_provenance = keyframe_util.run(
             input_file_path, keyframe_indices, output_dirs["keyframes"]
         )
 
@@ -52,7 +51,7 @@ def generate_input_for_feature_extraction(
             logger.error("Could not find keyframe_timestamps")
             sys.exit()
 
-        spectogram_provenance = _run_audio_extraction(
+        spectogram_provenance = spectogram_util.run(
             input_file_path,
             keyframe_timestamps,
             output_dirs["spectograms"],
@@ -60,7 +59,7 @@ def generate_input_for_feature_extraction(
         )
 
     # finally generate the provenance chain before returning the generated results
-    provenance = _generate_full_provenance_chain(
+    provenance = generate_full_provenance_chain(
         start_time,
         input_file_path,
         [
@@ -84,203 +83,6 @@ def _generate_output_dirs(input_file_path: str) -> Dict[str, str]:
             os.makedirs(output_dir)
         output_dirs[kind] = output_dir
     return output_dirs
-
-
-# Generates
-def _generate_full_provenance_chain(
-    start_time: float, input_file_path: str, provenance_chain: List[Provenance]
-) -> Provenance:
-    provenance = Provenance(
-        activity_name="VisXP prep",
-        activity_description=(
-            "Detect shots and keyframes, "
-            "extract keyframes and corresponding audio spectograms"
-        ),
-        start_time_unix=start_time,
-        processing_time_ms=start_time - time(),
-        parameters=cfg.VISXP_PREP,
-        steps=provenance_chain,
-        software_version=_obtain_software_versions(["dane-video-segmentation-worker"]),
-        input={"input_file_path": input_file_path},
-        output=reduce(
-            lambda a, b: {**a, **b},
-            [p.output for p in provenance_chain],
-        ),
-    )
-
-    output_file = os.path.join(
-        cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path), "provenance.json"
-    )
-    with open(output_file, "w+") as f:
-        f.write(str(provenance.to_json()))
-        logger.info(f"Wrote provenance info to file: {output_file}")
-    return provenance
-
-
-# Step 1: generate shots & keyframes using Hecate
-def _run_hecate(input_file_path: str, output_dir: str) -> Provenance:
-    start_time_hecate = time()
-    logger.info("Detecting shots and keyframes now.")
-    try:
-        shot_indices, keyframe_indices = hecate_util.detect_shots_and_keyframes(
-            media_file=input_file_path
-        )
-        logger.info(
-            f"Detected {len(keyframe_indices)} keyframes"
-            f"and {len(shot_indices)} shots."
-        )
-    except Exception:
-        logger.info("Could not obtain shots and keyframes. Exit.")
-        sys.exit()
-
-    fps = _get_fps(input_file_path)
-
-    # filter out the edge cases
-    keyframe_indices = _filter_edge_keyframes(
-        keyframe_indices=keyframe_indices,
-        fps=fps,
-        framecount=_get_framecount(input_file_path),
-    )
-
-    logger.info(f"Framerate is {fps}.")
-    output_paths = hecate_util.write_to_file(
-        shot_indices, keyframe_indices, output_dir, fps
-    )
-
-    return Provenance(
-        activity_name="Hecate",
-        activity_description="Hecate for shot and keyframe detection",
-        start_time_unix=start_time_hecate,
-        processing_time_ms=time() - start_time_hecate,
-        software_version=_obtain_software_versions(["hecate"]),
-        input={"input_file": input_file_path},
-        output=output_paths,
-    )
-
-
-# Step 2: run keyframe extraction based on list of keyframe indices
-def _run_keyframe_extraction(
-    input_file_path: str, keyframe_indices: List[int], output_dir: str
-) -> Provenance:
-    start_time_keyframes = time()
-    logger.info("Extracting keyframe images now.")
-
-    keyframe_files = keyframe_util.extract_keyframes(
-        media_file=input_file_path,
-        keyframe_indices=keyframe_indices,
-        out_dir=output_dir,
-    )
-    logger.info(f"Extracted {len(keyframe_indices)} keyframes.")
-    return Provenance(
-        activity_name="Keyframe extraction",
-        activity_description="Extract keyframes (images) for listed frame indices",
-        start_time_unix=start_time_keyframes,
-        processing_time_ms=time() - start_time_keyframes,
-        input={
-            "input_file_path": input_file_path,
-            "keyframe_indices": str(keyframe_indices),
-        },
-        output={"Keyframe files": str(keyframe_files)},
-    )
-
-
-# Step 3: run audio extraction based on a list of keyframe timestamps
-def _run_audio_extraction(
-    input_file_path: str, keyframe_timestamps: List[int], output_dir: str, tmp_dir: str
-) -> Provenance:
-    start_time_spectograms = time()
-    logger.info("Extracting audio spectograms now.")
-    sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
-
-    spectogram_files = []
-    for sample_rate in sample_rates:
-        logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
-        sf = spectogram_util.extract_audio_spectograms(
-            media_file=input_file_path,
-            keyframe_timestamps=keyframe_timestamps,
-            location=output_dir,
-            tmp_location=tmp_dir,
-            sample_rate=sample_rate,
-            window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
-        )
-        spectogram_files.extend(sf)
-    return Provenance(
-        activity_name="Spectogram extraction",
-        activity_description=(
-            "Extract audio spectogram (Numpy array)"
-            "corresponding to 1 sec. of audio around each listed keyframe"
-        ),
-        start_time_unix=start_time_spectograms,
-        processing_time_ms=time() - start_time_spectograms,
-        input={
-            "input_file_path": input_file_path,
-            "keyframe_timestamps": str(keyframe_timestamps),
-        },
-        output={"spectogram_files": str(spectogram_files)},
-    )
-
-
-def _filter_edge_keyframes(keyframe_indices, fps, framecount):
-    # compute number of frames that should exist on either side of the keyframe
-    half_window = cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS / 2000 * fps
-    logger.info(f"Half a window corresponds to {half_window} frames.")
-    logger.info(f"Clip consists of {framecount} frames.")
-    logger.info(
-        f"Omitting frames 0-{half_window} and" f"{framecount-half_window}-{framecount}"
-    )
-    filtered = [
-        keyframe_i
-        for keyframe_i in keyframe_indices
-        if keyframe_i > half_window and keyframe_i < framecount - half_window
-    ]
-    logger.info(f"Filtered out {len(keyframe_indices)-len(filtered)} edge keyframes")
-    return filtered
-
-
-def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
-    if out_format == "ms":
-        return round(frame_index / fps * 1000)
-
-
-def _get_framecount(media_file):
-    return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FRAME_COUNT)
-
-
-# NOTE might be replaced with:
-# ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=r_frame_rate testob.mp4
-def _get_fps(media_file):
-    return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FPS)
-
-
-def _obtain_software_versions(software_names):
-    if isinstance(software_names, str):  # wrap a single software name in a list
-        software_names = [software_names]
-    try:
-        with open("/software_provenance.txt") as f:
-            urls = (
-                {}
-            )  # for some reason I couldnt manage a working comprehension for the below - SV
-            for line in f.readlines():
-                name, url = line.split(";")
-                if name.strip() in software_names:
-                    urls[name.strip()] = url.strip()
-            assert len(urls) == len(software_names)
-            return urls
-    except FileNotFoundError:
-        logger.info(
-            f"Could not read {software_names} version"
-            f"from file /software_provenance.txt: file does not exist"
-        )
-    except ValueError as e:
-        logger.info(
-            f"Could not parse {software_names} version"
-            f"from file /software_provenance.txt. {e}"
-        )
-    except AssertionError:
-        logger.info(
-            f"Could not find {software_names} version"
-            f"in file /software_provenance.txt"
-        )
 
 
 def _read_from_file(metadata_file):

@@ -1,11 +1,52 @@
-import wave
+import logging
 import numpy as np
+import os
 from pydub import AudioSegment  # type: ignore
 import tensorflow as tf  # type: ignore
-import logging
-import os
+from time import time
+from typing import List
+import wave
+from dane.config import cfg
+from models import Provenance
+
 
 logger = logging.getLogger(__name__)
+
+
+# TODO this main function should be configurable via config.yml
+def run(
+    input_file_path: str, keyframe_timestamps: List[int], output_dir: str, tmp_dir: str
+) -> Provenance:
+    start_time_spectograms = time()
+    logger.info("Extracting audio spectograms now.")
+    sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
+
+    spectogram_files = []
+    for sample_rate in sample_rates:
+        logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
+        sf = extract_audio_spectograms(
+            media_file=input_file_path,
+            keyframe_timestamps=keyframe_timestamps,
+            location=output_dir,
+            tmp_location=tmp_dir,
+            sample_rate=sample_rate,
+            window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+        )
+        spectogram_files.extend(sf)
+    return Provenance(
+        activity_name="Spectogram extraction",
+        activity_description=(
+            "Extract audio spectogram (Numpy array)"
+            "corresponding to 1 sec. of audio around each listed keyframe"
+        ),
+        start_time_unix=start_time_spectograms,
+        processing_time_ms=time() - start_time_spectograms,
+        input={
+            "input_file_path": input_file_path,
+            "keyframe_timestamps": str(keyframe_timestamps),
+        },
+        output={"spectogram_files": str(spectogram_files)},
+    )
 
 
 def make_spectrogram(
