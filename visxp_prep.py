@@ -59,6 +59,37 @@ def generate_input_for_feature_extraction(
             output_dirs["tmp"],
         )
 
+    # finally generate the provenance chain before returning the generated results
+    provenance = _generate_full_provenance_chain(
+        start_time,
+        input_file_path,
+        [
+            p
+            for p in [hecate_provenance, keyframe_provenance, spectogram_provenance]
+            if p is not None
+        ],
+    )
+
+    return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
+
+
+# NOTE: maybe move this to base_util
+def _generate_output_dirs(input_file_path: str) -> Dict[str, str]:
+    output_dirs = {}
+    for kind in ["keyframes", "metadata", "spectograms", "tmp"]:
+        output_dir = os.path.join(
+            cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path), kind
+        )
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+        output_dirs[kind] = output_dir
+    return output_dirs
+
+
+# Generates
+def _generate_full_provenance_chain(
+    start_time: float, input_file_path: str, provenance_chain: List[Provenance]
+) -> Provenance:
     provenance = Provenance(
         activity_name="VisXP prep",
         activity_description=(
@@ -68,43 +99,22 @@ def generate_input_for_feature_extraction(
         start_time_unix=start_time,
         processing_time_ms=start_time - time(),
         parameters=cfg.VISXP_PREP,
-        steps=[
-            prov
-            for prov in [hecate_provenance, keyframe_provenance, spectogram_provenance]
-            if prov is not None
-        ],
+        steps=provenance_chain,
         software_version=_obtain_software_versions(["dane-video-segmentation-worker"]),
         input={"input_file_path": input_file_path},
         output=reduce(
             lambda a, b: {**a, **b},
-            [
-                prov.output
-                for prov in [
-                    hecate_provenance,
-                    keyframe_provenance,
-                    spectogram_provenance,
-                ]
-                if prov is not None
-            ],
+            [p.output for p in provenance_chain],
         ),
     )
 
-    with open("/data/provenance.json", "w") as f:
+    output_file = os.path.join(
+        cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path), "provenance.json"
+    )
+    with open(output_file, "w+") as f:
         f.write(str(provenance.to_json()))
-    logger.info("Wrote provenance info to file: /data/provenance.json")
-
-    return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
-
-
-# NOTE: maybe move this to base_util
-def _generate_output_dirs(input_file_path: str) -> Dict[str, str]:
-    output_dirs = {}
-    for kind in ["keyframes", "metadata", "spectograms", "tmp"]:
-        output_dir = os.path.join("/data", get_source_id(input_file_path), kind)
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir)
-        output_dirs[kind] = output_dir
-    return output_dirs
+        logger.info(f"Wrote provenance info to file: {output_file}")
+    return provenance
 
 
 # Step 1: generate shots & keyframes using Hecate
@@ -148,6 +158,7 @@ def _run_hecate(input_file_path: str, output_dir: str) -> Provenance:
     )
 
 
+# Step 2: run keyframe extraction based on list of keyframe indices
 def _run_keyframe_extraction(
     input_file_path: str, keyframe_indices: List[int], output_dir: str
 ) -> Provenance:
@@ -173,6 +184,7 @@ def _run_keyframe_extraction(
     )
 
 
+# Step 3: run audio extraction based on a list of keyframe timestamps
 def _run_audio_extraction(
     input_file_path: str, keyframe_timestamps: List[int], output_dir: str, tmp_dir: str
 ) -> Provenance:
