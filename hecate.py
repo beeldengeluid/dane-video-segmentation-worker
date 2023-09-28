@@ -10,8 +10,6 @@ from provenance import obtain_software_versions
 
 
 logger = logging.getLogger(__name__)
-hecate_path = "/hecate/distribute/bin/hecate"
-# TODO: test environment variable instead of specifying path here
 
 
 # NOTE main function should be configurable in config.yml
@@ -57,7 +55,7 @@ def detect_shots_and_keyframes(
     media_file: str,
 ) -> tuple[list[tuple[int, ...]], list[int]]:
     cmd = [
-        hecate_path,
+        "hecate",  # NOTE: should be findable in PATH
         "-i",
         media_file,
         "--print_shot_info",

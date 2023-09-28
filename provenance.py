@@ -9,9 +9,10 @@ from models import Provenance
 
 
 logger = logging.getLogger(__name__)
+SOFTWARE_PROVENANCE_FILE = "/software_provenance.txt"
 
 
-# Generates
+# Generates a the main Provenance object, which will embed/include the provided provenance_chain
 def generate_full_provenance_chain(
     start_time: float, input_file_path: str, provenance_chain: List[Provenance]
 ) -> Provenance:
@@ -47,7 +48,7 @@ def obtain_software_versions(software_names):
     if isinstance(software_names, str):  # wrap a single software name in a list
         software_names = [software_names]
     try:
-        with open("/software_provenance.txt") as f:
+        with open(SOFTWARE_PROVENANCE_FILE) as f:
             urls = (
                 {}
             )  # for some reason I couldnt manage a working comprehension for the below - SV
@@ -60,15 +61,15 @@ def obtain_software_versions(software_names):
     except FileNotFoundError:
         logger.info(
             f"Could not read {software_names} version"
-            f"from file /software_provenance.txt: file does not exist"
+            f"from file {SOFTWARE_PROVENANCE_FILE}: file does not exist"
         )
     except ValueError as e:
         logger.info(
             f"Could not parse {software_names} version"
-            f"from file /software_provenance.txt. {e}"
+            f"from file {SOFTWARE_PROVENANCE_FILE}. {e}"
         )
     except AssertionError:
         logger.info(
             f"Could not find {software_names} version"
-            f"in file /software_provenance.txt"
+            f"in file {SOFTWARE_PROVENANCE_FILE}"
         )

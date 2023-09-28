@@ -41,15 +41,16 @@ RUN git clone https://github.com/yahoo/hecate.git && \
 
 ## above this line: copied from https://github.com/yahoo/hecate/blob/master/docker/base.Dockerfile
 
-
 # install Python 3.10 from source
-
 RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
     tar -xf Python-3.10.*.tgz && \
     cd Python-3.10.*/ && \
     ./configure --prefix=/usr/local --enable-optimizations --enable-shared LDFLAGS="-Wl,-rpath /usr/local/lib" && \
     make -j $(nproc) && \
     make altinstall
+
+# add hecate to the PATH
+ENV PATH="${PATH}:/hecate/distribute/bin"
 
 COPY ./ /src
 
