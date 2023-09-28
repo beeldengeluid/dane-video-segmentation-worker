@@ -1,4 +1,4 @@
-from visxp_prep import _filter_edge_keyframes
+from hecate import filter_edge_keyframes
 
 
 def test_filter_edge_keyframes():
@@ -15,5 +15,5 @@ def test_filter_edge_keyframes():
     ]
     # fmt: on
     expected_result = [edge_1 + 1, 29, 30, 100, edge_2]
-    result = _filter_edge_keyframes(frame_indices, fps=fps, framecount=framecount)
+    result = filter_edge_keyframes(frame_indices, fps=fps, framecount=framecount)
     assert result == expected_result

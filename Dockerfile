@@ -39,7 +39,6 @@ RUN git clone https://github.com/yahoo/hecate.git && \
     make all && \
     make distribute
 
-
 ## above this line: copied from https://github.com/yahoo/hecate/blob/master/docker/base.Dockerfile
 
 
@@ -52,26 +51,30 @@ RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
     make -j $(nproc) && \
     make altinstall
 
-## under this line: copied form https://github.com/beeldengeluid/dane-asr-worker/blob/main/Dockerfile
-
 COPY ./ /src
 
 # override this config in Kubernetes with a ConfigMap mounted as a volume to /root/.DANE
 RUN mkdir /root/.DANE
 
-# create the mountpoint for storing /input-files and /asr-output dirs
+# create the mountpoint for storing /input-files and /output dirs
 RUN mkdir /mnt/dane-fs
 
 WORKDIR /src
+
 
 # install dependencies
 
 RUN python3.10 -m pip install --upgrade pip
 RUN python3.10 -m pip install -r requirements.txt
 
+
+# Write provenance info about software versions to file
+RUN echo "dane-video-segmentation-worker;https://github.com/beeldengeluid/dane-video-segmentation-worker/commit/$(git rev-parse HEAD)" >> /software_provenance.txt && \
+    cd /hecate && echo "hecate;https://github.com/yahoo/hecate/commit/$(git rev-parse HEAD)" >> /software_provenance.txt
+
 ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # references
-# # ref: https://cerebrumedge.com/blog/entry/compiling-opencv-with-cuda-and-ffmpeg-on-ubuntu-16.04#:~:text=FFMpeg%20and%20OpenCV,OPENCV_SOURCE_CODE%2F3rdparty%2Fffmpeg%2F.
+# https://cerebrumedge.com/blog/entry/compiling-opencv-with-cuda-and-ffmpeg-on-ubuntu-16.04#:~:text=FFMpeg%20and%20OpenCV,OPENCV_SOURCE_CODE%2F3rdparty%2Fffmpeg%2F.
 # https://stackoverflow.com/questions/46884682/error-in-building-opencv-with-ffmpeg
 # https://stackoverflow.com/questions/12335848/opencv-program-compile-error-libopencv-core-so-2-4-cannot-open-shared-object-f

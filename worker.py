@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import Optional
 import os
 import ntpath
 import sys
@@ -7,7 +7,8 @@ import requests
 import logging
 from urllib.parse import urlparse
 from time import time
-from dataclasses import dataclass
+
+
 from dane.base_classes import base_worker
 from dane.config import cfg
 from dane import Document, Task, Result
@@ -15,6 +16,7 @@ from base_util import validate_config, LOG_FORMAT
 from output_util import transfer_output, delete_local_output
 from pika.exceptions import ChannelClosedByBroker
 from visxp_prep import generate_input_for_feature_extraction
+from models import CallbackResponse, DownloadResult, Provenance
 
 """
 NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLDER is not used:
@@ -34,21 +36,6 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 
-# NOTE copied from dane-beng-download-worker (move this to DANE later)
-@dataclass
-class DownloadResult:
-    file_path: str  # target_file_path,  # TODO harmonize with dane-download-worker
-    download_time: float = -1  # time (secs) taken to receive data after request
-    mime_type: str = "unknown"  # download_data.get("mime_type", "unknown"),
-    content_length: int = -1  # download_data.get("content_length", -1),
-
-
-# returned by callback()
-class CallbackResponse(TypedDict):
-    state: int
-    message: str
-
-
 class VideoSegmentationWorker(base_worker):
     def __init__(self, config):
         logger.info(config)
@@ -60,7 +47,8 @@ class VideoSegmentationWorker(base_worker):
             sys.exit()
 
         # first make sure the config has everything we need
-        # Note: base_config is loaded first by DANE, so make sure you overwrite everything in your config.yml!
+        # Note: base_config is loaded first by DANE,
+        # so make sure you overwrite everything in your config.yml!
         try:
             # put all of the relevant settings in a variable
             self.BASE_MOUNT: str = config.FILE_SYSTEM.BASE_MOUNT
@@ -150,6 +138,16 @@ class VideoSegmentationWorker(base_worker):
         logger.info(task)
         logger.info(doc)
 
+        # step 0: Create provenance object
+        provenance = Provenance(
+            activity_name="dane-video-segmenation-worker",
+            activity_description="Apply VisXP prep to input media",
+            start_time_unix=time(),
+            processing_time_ms=-1,
+            input={},
+            output={},
+        )
+
         # step 1: try to fetch the content via the configured DANE download worker
         download_result = self.fetch_downloaded_content(doc)
 
@@ -164,18 +162,30 @@ class VideoSegmentationWorker(base_worker):
                     "state": 500,
                     "message": "Could not download the document content",
                 }
+        download_provenance = Provenance(
+            activity_name="download",
+            activity_description="Download source media",
+            start_time_unix=-1,
+            processing_time_ms=download_result.download_time * 1000,
+            input={},
+            output={"file_path": download_result.file_path},
+        )
+        if not provenance.steps:
+            provenance.steps = []
+        provenance.steps.append(download_provenance)
 
         input_file = download_result.file_path
 
         # step 3: submit the input file to hecate/etc
         proc_result = generate_input_for_feature_extraction(input_file)
 
-        # step 4: generate a transcript from the ASR service's output
+        # step 4: raise exception on failure
         if proc_result.state != 200:
             # something went wrong inside the ASR service, return that response here
             return {"state": proc_result.state, "message": proc_result.message}
+        provenance.steps.append(proc_result.provenance)
 
-        # step 5: ASR returned successfully, generate the transcript
+        # step 5: process returned successfully, generate the output
         asset_id = self.get_asset_id(input_file)
         visxp_output_dir = self.get_visxp_output_dir(asset_id)
 
@@ -214,6 +224,7 @@ class VideoSegmentationWorker(base_worker):
             doc,
             task,
             visxp_output_dir,  # TODO adapt function and pass whatever is neccesary for VisXP
+            provenance=provenance,
         )
         return {
             "state": 200,
@@ -262,7 +273,7 @@ class VideoSegmentationWorker(base_worker):
         doc: Document,
         task: Task,
         visxp_output_dir: str,
-        # provenance: ASRProvenance = None,
+        provenance: Provenance,
     ) -> None:
         logger.info("saving results to DANE, task id={0}".format(task._id))
         # TODO figure out the multiple lines per transcript (refresh my memory)
@@ -275,7 +286,7 @@ class VideoSegmentationWorker(base_worker):
                 # "task_id": task._id if task else None,  # TODO add this as well
                 # "doc_target_id": doc.target["id"],
                 # "doc_target_url": doc.target["url"],
-                # "provenance": provenance.to_json()
+                "provenance": provenance.to_json()
                 # if provenance
                 # else None,  # TODO test this
             },

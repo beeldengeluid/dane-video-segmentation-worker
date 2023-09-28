@@ -1,148 +1,97 @@
 import logging
-import sys
-import hecate_util
-import keyframe_util
-import spectogram_util
-import cv2  # type: ignore
 import os
+import sys
+from time import time
+from typing import Dict
+
 from base_util import get_source_id
 from dane.config import cfg
-from dataclasses import dataclass
+import hecate
+import keyframe_extraction
+from models import VisXPFeatureExtractionInput
+from provenance import generate_full_provenance_chain
+import spectogram
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class VisXPFeatureExtractionInput:
-    state: int
-    message: str
-    processing_time: float
 
 
 # TODO call this from the worker and start the actual processing of the input
 def generate_input_for_feature_extraction(
     input_file_path: str,
 ) -> VisXPFeatureExtractionInput:
+    start_time = time()
     logger.info(f"Processing input: {input_file_path}")
 
+    output_dirs = _generate_output_dirs(input_file_path)
+
+    hecate_provenance = None
+    keyframe_provenance = None
+    spectogram_provenance = None
+
+    if cfg.VISXP_PREP.RUN_HECATE:
+        hecate_provenance = hecate.run(input_file_path, output_dirs["metadata"])
+
+    if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
+        keyframe_indices = _read_from_file(
+            os.path.join(output_dirs["metadata"], "keyframes_indices.txt")
+        )
+        if not keyframe_indices:
+            logger.error("Could not find keyframe_indices")
+            sys.exit()
+
+        keyframe_provenance = keyframe_extraction.run(
+            input_file_path, keyframe_indices, output_dirs["keyframes"]
+        )
+
+    if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
+        keyframe_timestamps = _read_from_file(
+            os.path.join(output_dirs["metadata"], "keyframes_timestamps_ms.txt")
+        )
+        if not keyframe_timestamps:
+            logger.error("Could not find keyframe_timestamps")
+            sys.exit()
+
+        spectogram_provenance = spectogram.run(
+            input_file_path,
+            keyframe_timestamps,
+            output_dirs["spectograms"],
+            output_dirs["tmp"],
+        )
+
+    # finally generate the provenance chain before returning the generated results
+    provenance = generate_full_provenance_chain(
+        start_time,
+        input_file_path,
+        [
+            p
+            for p in [hecate_provenance, keyframe_provenance, spectogram_provenance]
+            if p is not None
+        ],
+    )
+
+    return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
+
+
+# NOTE: maybe move this to base_util
+def _generate_output_dirs(input_file_path: str) -> Dict[str, str]:
     output_dirs = {}
     for kind in ["keyframes", "metadata", "spectograms", "tmp"]:
-        output_dir = os.path.join("/data", get_source_id(input_file_path), kind)
+        output_dir = os.path.join(
+            cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path), kind
+        )
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
         output_dirs[kind] = output_dir
-
-    if cfg.VISXP_PREP.RUN_HECATE:
-        logger.info("Detecting shots and keyframes now.")
-        try:
-            shots, keyframes = hecate_util.detect_shots_and_keyframes(
-                media_file=input_file_path
-            )
-            logger.info(f"Detected {len(keyframes)} keyframes and {len(shots)} shots.")
-        except Exception:
-            logger.info("Could not obtain shots and keyframes. Exit.")
-            sys.exit()
-        fps = _get_fps(input_file_path)
-        logger.info(f"Framerate is {fps}.")
-
-        keyframes = _filter_edge_keyframes(
-            keyframe_indices=keyframes,
-            fps=fps,
-            framecount=_get_framecount(input_file_path),
-        )
-
-        with open(
-            os.path.join(output_dirs["metadata"], "shot_boundaries_timestamps_ms.txt"),
-            "w",
-        ) as f:
-            f.write(
-                str(
-                    [
-                        (
-                            _frame_index_to_timecode(start, fps),
-                            _frame_index_to_timecode(end, fps),
-                        )
-                        for (start, end) in shots
-                    ]
-                )
-            )
-        with open(
-            os.path.join(output_dirs["metadata"], "keyframes_indices.txt"), "w"
-        ) as f:
-            f.write(str(keyframes))
-        with open(
-            os.path.join(output_dirs["metadata"], "keyframes_timestamps_ms.txt"), "w"
-        ) as f:
-            f.write(str([_frame_index_to_timecode(i, fps) for i in keyframes]))
-
-    if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
-        logger.info("Extracting keyframe images now.")
-        with open(
-            os.path.join(output_dirs["metadata"], "keyframes_indices.txt"), "r"
-        ) as f:
-            keyframe_indices = eval(f.read())
-            logger.debug(keyframe_indices)
-        keyframe_util.extract_keyframes(
-            media_file=input_file_path,
-            keyframe_indices=keyframe_indices,
-            out_dir=output_dirs["keyframes"],
-        )
-        logger.info(f"Extracted {len(keyframe_indices)} keyframes.")
-
-    if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
-        with open(
-            os.path.join(output_dirs["metadata"], "keyframes_timestamps_ms.txt"), "r"
-        ) as f:
-            keyframe_timestamps = eval(f.read())
-            logger.debug(keyframe_timestamps)
-        logger.info(
-            f"Extracting audio spectograms for {len(keyframe_timestamps)} keyframes."
-        )
-        sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
-        for sample_rate in sample_rates:
-            logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
-            spectogram_util.extract_audio_spectograms(
-                media_file=input_file_path,
-                keyframe_timestamps=keyframe_timestamps,
-                location=output_dirs["spectograms"],
-                tmp_location=output_dirs["tmp"],
-                sample_rate=sample_rate,
-                window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
-            )
-    return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1)
+    return output_dirs
 
 
-def _filter_edge_keyframes(keyframe_indices, fps, framecount):
-    # compute number of frames that should exist on either side of the keyframe
-    half_window = cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS / 2000 * fps
-    logger.info(f"Half a window corresponds to {half_window} frames.")
-    logger.info(f"Clip consists of {framecount} frames.")
-    logger.info(
-        f"Omitting frames 0-{half_window} and" f"{framecount-half_window}-{framecount}"
-    )
-    filtered = [
-        keyframe_i
-        for keyframe_i in keyframe_indices
-        if keyframe_i > half_window and keyframe_i < framecount - half_window
-    ]
-    logger.info(f"Filtered out {len(keyframe_indices)-len(filtered)} edge keyframes")
-    return filtered
-
-
-def _frame_index_to_timecode(frame_index: int, fps: float, out_format="ms"):
-    if out_format == "ms":
-        return round(frame_index / fps * 1000)
-
-
-def _get_framecount(media_file):
-    return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FRAME_COUNT)
-
-
-# NOTE might be replaced with:
-# ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=r_frame_rate testob.mp4
-def _get_fps(media_file):
-    return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FPS)
+# NOTE: maybe move this to base_util
+def _read_from_file(metadata_file):
+    with open(metadata_file, "r") as f:
+        result = eval(f.read())
+        logger.debug(result)
+    return result
 
 
 if __name__ == "__main__":
