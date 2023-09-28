@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def run(
     input_file_path: str, keyframe_indices: List[int], output_dir: str
 ) -> Provenance:
-    start_time_keyframes = time()
+    start_time = time()
     logger.info("Extracting keyframe images now.")
 
     keyframe_files = extract_keyframes(
@@ -25,8 +25,8 @@ def run(
     return Provenance(
         activity_name="Keyframe extraction",
         activity_description="Extract keyframes (images) for listed frame indices",
-        start_time_unix=start_time_keyframes,
-        processing_time_ms=time() - start_time_keyframes,
+        start_time_unix=start_time,
+        processing_time_ms=time() - start_time,
         input={
             "input_file_path": input_file_path,
             "keyframe_indices": str(keyframe_indices),

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # NOTE main function should be configurable in config.yml
 def run(input_file_path: str, output_dir: str) -> Provenance:
-    start_time_hecate = time()
+    start_time = time()
     logger.info("Detecting shots and keyframes now.")
     try:
         shot_indices, keyframe_indices = detect_shots_and_keyframes(
@@ -43,8 +43,8 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
     return Provenance(
         activity_name="Hecate",
         activity_description="Hecate for shot and keyframe detection",
-        start_time_unix=start_time_hecate,
-        processing_time_ms=time() - start_time_hecate,
+        start_time_unix=start_time,
+        processing_time_ms=time() - start_time,
         software_version=obtain_software_versions(["hecate"]),
         input={"input_file": input_file_path},
         output=output_paths,

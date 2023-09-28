@@ -23,7 +23,7 @@ def generate_full_provenance_chain(
             "extract keyframes and corresponding audio spectograms"
         ),
         start_time_unix=start_time,
-        processing_time_ms=start_time - time(),
+        processing_time_ms=time() - start_time,
         parameters=cfg.VISXP_PREP,
         steps=provenance_chain,
         software_version=obtain_software_versions(["dane-video-segmentation-worker"]),

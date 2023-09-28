@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def run(
     input_file_path: str, keyframe_timestamps: List[int], output_dir: str, tmp_dir: str
 ) -> Provenance:
-    start_time_spectograms = time()
+    start_time = time()
     logger.info("Extracting audio spectograms now.")
     sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
 
@@ -39,8 +39,8 @@ def run(
             "Extract audio spectogram (Numpy array)"
             "corresponding to 1 sec. of audio around each listed keyframe"
         ),
-        start_time_unix=start_time_spectograms,
-        processing_time_ms=time() - start_time_spectograms,
+        start_time_unix=start_time,
+        processing_time_ms=time() - start_time,
         input={
             "input_file_path": input_file_path,
             "keyframe_timestamps": str(keyframe_timestamps),
