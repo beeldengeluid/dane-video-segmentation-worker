@@ -1,5 +1,15 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional, TypedDict
+
+
+# These are the types of output this worker (possibly) provides (depending on configuration)
+class OutputType(Enum):
+    KEYFRAMES = "keyframes"
+    METADATA = "metadata"
+    PROVENANCE = "provenance"
+    SPECTOGRAMS = "spectograms"
+    TMP = "tmp"
 
 
 # returned by callback()
@@ -49,3 +59,25 @@ class VisXPFeatureExtractionInput:
     message: str
     processing_time: float
     provenance: Provenance
+
+
+""" NOTE the output should contain the following dir structure + files
+./testob/spectograms/22960_48000.npz
+./testob/spectograms/19680_48000.npz
+./testob/spectograms/9520_24000.npz
+./testob/spectograms/85680_48000.npz
+./testob/spectograms/18520_24000.npz
+
+./testob/keyframes/101880.jpg
+./testob/keyframes/40320.jpg
+./testob/keyframes/85680.jpg
+
+./testob/metadata/keyframes_timestamps_ms.txt
+./testob/metadata/keyframes_indices.txt
+./testob/metadata/shot_boundaries_timestamps_ms.txt
+
+./testob/provenance.json --> change to ./testob/provenance/overal_provenance.json (possibly per processing unit a file as well)
+
+./testob/tmp/output_24000.wav
+./testob/tmp/output_48000.wav
+"""

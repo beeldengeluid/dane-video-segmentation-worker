@@ -1,22 +1,22 @@
-from typing import Optional
-import os
+import logging
 import ntpath
-import sys
+import os
 from pathlib import Path
 import requests
-import logging
-from urllib.parse import urlparse
+import sys
 from time import time
+from typing import Optional
+from urllib.parse import urlparse
 
-
+from base_util import validate_config, LOG_FORMAT
+from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
-from dane import Document, Task, Result
-from base_util import validate_config, LOG_FORMAT
+from models import CallbackResponse, DownloadResult, Provenance
 from output_util import transfer_output, delete_local_output
 from pika.exceptions import ChannelClosedByBroker
 from visxp_prep import generate_input_for_feature_extraction
-from models import CallbackResponse, DownloadResult, Provenance
+
 
 """
 NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLDER is not used:
