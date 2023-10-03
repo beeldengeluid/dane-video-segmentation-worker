@@ -86,7 +86,7 @@ class VideoSegmentationWorker(base_worker):
         # listen to the same queue
         self.__queue_name = "VISXP_PREP"  # this is the queue that receives the work and NOT the reply queue
         self.DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
-        self.__binding_key = "#.VISXP_PREP"  # ['Video.ASR', 'Sound.ASR']#'#.ASR'
+        self.__binding_key = "#.VISXP_PREP"  # ['Video.VISXP_PREP', 'Sound.VISXP_PREP']
         self.__depends_on = self.DANE_DEPENDENCIES  # TODO make this part of DANE lib?
 
         if not self.UNIT_TESTING:
@@ -118,13 +118,13 @@ class VideoSegmentationWorker(base_worker):
         # make sure the input and output dirs are there
         try:
             os.makedirs(i_dir, 0o755)
-            logger.info("created ASR input dir: {}".format(i_dir))
+            logger.info("created VisXP input dir: {}".format(i_dir))
         except FileExistsError as e:
             logger.info(e)
 
         try:
             os.makedirs(o_dir, 0o755)
-            logger.info("created ASR output dir: {}".format(o_dir))
+            logger.info("created VisXP output dir: {}".format(o_dir))
         except FileExistsError as e:
             logger.info(e)
 
@@ -181,7 +181,7 @@ class VideoSegmentationWorker(base_worker):
 
         # step 4: raise exception on failure
         if proc_result.state != 200:
-            # something went wrong inside the ASR service, return that response here
+            # something went wrong inside the VisXP work processor, return that response here
             return {"state": proc_result.state, "message": proc_result.message}
         provenance.steps.append(proc_result.provenance)
 
@@ -241,7 +241,7 @@ class VideoSegmentationWorker(base_worker):
         # # first remove the input file
         # try:
         #     os.remove(input_file)
-        #     logger.info(f"Deleted ASR input file: {input_file}")
+        #     logger.info(f"Deleted VisXP input file: {input_file}")
         #     # also remove the transcoded mp3 file (if any)
         #     if input_file.find(".mp3") == -1 and input_file.find(".") != -1:
         #         mp3_input_file = f"{input_file[:input_file.rfind('.')]}.mp3"
@@ -266,8 +266,7 @@ class VideoSegmentationWorker(base_worker):
 
         return True  # return True even if empty dirs were not removed
 
-    # Note: the supplied transcript is EXACTLY the same as what we use in layer__asr in the collection indices,
-    # meaning it should be quite trivial to append the DANE output into a collection
+    # TODO adapt to VisXP
     def save_to_dane_index(
         self,
         doc: Document,
@@ -296,7 +295,7 @@ class VideoSegmentationWorker(base_worker):
 
     """----------------------------------ID MANAGEMENT FUNCTIONS ---------------------------------"""
 
-    # the file name without extension is used as an asset ID by the ASR container to save the results
+    # the file name without extension is used as an asset ID by the container to save the results
     def get_asset_id(self, input_file: str) -> str:
         # grab the file_name from the path
         file_name = ntpath.basename(input_file)

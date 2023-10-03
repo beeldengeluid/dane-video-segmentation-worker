@@ -5,11 +5,14 @@ from time import time
 from typing import List
 from base_util import get_source_id
 from dane.config import cfg
-from models import Provenance
+from models import Provenance, OutputType
 
 
 logger = logging.getLogger(__name__)
 SOFTWARE_PROVENANCE_FILE = "/software_provenance.txt"
+DANE_WORKER_ID = (
+    "dane-video-segmentation-worker"  # NOTE: should be same as GH repo name!
+)
 
 
 # Generates a the main Provenance object, which will embed/include the provided provenance_chain
@@ -26,7 +29,7 @@ def generate_full_provenance_chain(
         processing_time_ms=time() - start_time,
         parameters=cfg.VISXP_PREP,
         steps=provenance_chain,
-        software_version=obtain_software_versions(["dane-video-segmentation-worker"]),
+        software_version=obtain_software_versions([DANE_WORKER_ID]),
         input={"input_file_path": input_file_path},
         output=reduce(
             lambda a, b: {**a, **b},
@@ -34,13 +37,20 @@ def generate_full_provenance_chain(
         ),
     )
 
-    output_file = os.path.join(
-        cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path), "provenance.json"
-    )
+    output_file = get_provenance_file(input_file_path)
     with open(output_file, "w+") as f:
         f.write(str(provenance.to_json()))
         logger.info(f"Wrote provenance info to file: {output_file}")
     return provenance
+
+
+def get_provenance_file(input_file_path: str):
+    return os.path.join(
+        cfg.VISXP_PREP.OUTPUT_DIR,
+        get_source_id(input_file_path),
+        OutputType.PROVENANCE.value,
+        "provenance.json",
+    )
 
 
 # NOTE: software_provenance.txt is created while building the container image (see Dockerfile)

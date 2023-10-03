@@ -5,11 +5,11 @@ from typing import Optional, TypedDict
 
 # These are the types of output this worker (possibly) provides (depending on configuration)
 class OutputType(Enum):
-    KEYFRAMES = "keyframes"
-    METADATA = "metadata"
-    PROVENANCE = "provenance"
-    SPECTOGRAMS = "spectograms"
-    TMP = "tmp"
+    KEYFRAMES = "keyframes"  # produced by keyframe_extraction.py
+    METADATA = "metadata"  # produced by hecate.py
+    PROVENANCE = "provenance"  # produced by provenance.py
+    SPECTOGRAMS = "spectograms"  # produced by spectogram.py
+    TMP = "tmp"  # produced by spectogram.py
 
 
 # returned by callback()
