@@ -8,14 +8,14 @@ from time import time
 from typing import Optional
 from urllib.parse import urlparse
 
-from base_util import validate_config, LOG_FORMAT
+from base_util import validate_config
 from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
 from models import CallbackResponse, DownloadResult, Provenance
 from output_util import transfer_output, delete_local_output
 from pika.exceptions import ChannelClosedByBroker
-from visxp_prep import generate_input_for_feature_extraction
+from main_data_processor import generate_input_for_feature_extraction
 
 
 """
@@ -27,12 +27,6 @@ Instead we put the output in:
 
 - /mnt/dane-fs/output-files/visxp_prep/{asset-id}
 """
-# initialises the root logger
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stdout,  # configure a stream handler only for now (single handler)
-    format=LOG_FORMAT,
-)
 logger = logging.getLogger()
 
 
@@ -353,17 +347,54 @@ class VideoSegmentationWorker(base_worker):
 
 
 # Start the worker
+# passing --run-test-file will run the whole process on the file defined in cfg.VISXP_PREP.TEST_FILE
 if __name__ == "__main__":
-    w = VideoSegmentationWorker(cfg)
-    try:
-        w.run()
-    except ChannelClosedByBroker:
-        """
-        (406, 'PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out.
-        Timeout value used: 1800000 ms.
-        This timeout value can be configured, see consumers doc guide to learn more')
-        """
-        logger.critical("Please increase the consumer_timeout in your RabbitMQ server")
-        w.stop()
-    except (KeyboardInterrupt, SystemExit):
-        w.stop()
+    from argparse import ArgumentParser
+    from base_util import LOG_FORMAT
+
+    # first read the CLI arguments
+    parser = ArgumentParser(description="dane-video-segmentation-worker")
+    parser.add_argument(
+        "--run-test-file", action="store", dest="run_test_file", default="n", nargs="?"
+    )
+    parser.add_argument("--log", action="store", dest="loglevel", default="DEBUG")
+    args = parser.parse_args()
+
+    # initialises the root logger
+    logging.basicConfig(
+        stream=sys.stdout,  # configure a stream handler only for now (single handler)
+        format=LOG_FORMAT,
+    )
+
+    # setting the loglevel
+    log_level = args.loglevel.upper()
+    logger.setLevel(log_level)
+    logger.info(f"Logger initialized (log level: {log_level})")
+    logger.info(f"Got the following CMD line arguments: {args}")
+
+    # see if the test file must be run
+    if args.run_test_file != "n":
+        logger.info("Running main_data_processor with VISXP_PREP.TEST_INPUT_FILE ")
+        if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
+            generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
+        else:
+            logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
+            sys.exit()
+    else:
+        logger.info("Starting the worker")
+        # start the worker
+        w = VideoSegmentationWorker(cfg)
+        try:
+            w.run()
+        except ChannelClosedByBroker:
+            """
+            (406, 'PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out.
+            Timeout value used: 1800000 ms.
+            This timeout value can be configured, see consumers doc guide to learn more')
+            """
+            logger.critical(
+                "Please increase the consumer_timeout in your RabbitMQ server"
+            )
+            w.stop()
+        except (KeyboardInterrupt, SystemExit):
+            w.stop()

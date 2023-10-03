@@ -99,18 +99,3 @@ def _read_from_file(metadata_file):
         result = eval(f.read())
         logger.debug(result)
     return result
-
-
-if __name__ == "__main__":
-    from base_util import LOG_FORMAT
-
-    logging.basicConfig(
-        level=logging.INFO,
-        stream=sys.stdout,  # configure a stream handler only for now (single handler)
-        format=LOG_FORMAT,
-    )
-
-    if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
-        generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
-    else:
-        logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
