@@ -1,14 +1,12 @@
 import logging
-import os
 import sys
 from time import time
-from typing import Dict
 
-from base_util import get_source_id
 from dane.config import cfg
 import hecate
 import keyframe_extraction
-from models import VisXPFeatureExtractionInput, OutputType
+from models import VisXPFeatureExtractionInput, OutputType, HecateOutput
+from output_util import generate_output_dirs
 from provenance import generate_full_provenance_chain
 import spectogram
 
@@ -24,7 +22,7 @@ def generate_input_for_feature_extraction(
     logger.info(f"Processing input: {input_file_path}")
 
     # Step 1: generate output dir per OutputType
-    output_dirs = _generate_output_dirs(input_file_path)
+    output_dirs = generate_output_dirs(input_file_path)
 
     hecate_provenance = None
     keyframe_provenance = None
@@ -36,10 +34,8 @@ def generate_input_for_feature_extraction(
         )
 
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
-        keyframe_indices = _read_from_file(
-            os.path.join(
-                output_dirs[OutputType.METADATA.value], "keyframes_indices.txt"
-            )
+        keyframe_indices = hecate.get_output(
+            output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
         )
         if not keyframe_indices:
             logger.error("Could not find keyframe_indices")
@@ -50,10 +46,8 @@ def generate_input_for_feature_extraction(
         )
 
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
-        keyframe_timestamps = _read_from_file(
-            os.path.join(
-                output_dirs[OutputType.METADATA.value], "keyframes_timestamps_ms.txt"
-            )
+        keyframe_timestamps = hecate.get_output(
+            output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
         )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")
@@ -78,24 +72,3 @@ def generate_input_for_feature_extraction(
     )
 
     return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
-
-
-# NOTE: maybe move this to base_util
-def _generate_output_dirs(input_file_path: str) -> Dict[str, str]:
-    output_dirs = {}
-    for output_type in OutputType:
-        output_dir = os.path.join(
-            cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path), output_type.value
-        )
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir)
-        output_dirs[output_type.value] = output_dir
-    return output_dirs
-
-
-# NOTE: maybe move this to base_util
-def _read_from_file(metadata_file):
-    with open(metadata_file, "r") as f:
-        result = eval(f.read())
-        logger.debug(result)
-    return result

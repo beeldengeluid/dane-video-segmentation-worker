@@ -3,7 +3,7 @@ import logging
 import os
 from time import time
 from typing import List
-from base_util import get_source_id
+from output_util import get_source_id
 from dane.config import cfg
 from models import Provenance, OutputType
 

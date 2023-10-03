@@ -1,18 +1,19 @@
-import base_util
 import logging
 import os
 import sys
-from models import Provenance
-from time import time
-from keyframe_extraction import get_fps, get_framecount, frame_index_to_timecode
+import base_util
 from dane.config import cfg
+from keyframe_extraction import get_fps, get_framecount, frame_index_to_timecode
+from models import Provenance, HecateOutput
 from provenance import obtain_software_versions
+from time import time
 
 
 logger = logging.getLogger(__name__)
 
 
 # NOTE main function should be configurable in config.yml
+# each processing module has a run function
 def run(input_file_path: str, output_dir: str) -> Provenance:
     start_time = time()
     logger.info("Detecting shots and keyframes now.")
@@ -38,7 +39,9 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
     )
 
     logger.info(f"Framerate is {fps}.")
-    output_paths = write_to_file(shot_indices, keyframe_indices, output_dir, fps)
+    output_paths = _write_to_metadata_file(
+        shot_indices, keyframe_indices, output_dir, fps
+    )
 
     return Provenance(
         activity_name="Hecate",
@@ -49,6 +52,11 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
         input={"input_file": input_file_path},
         output=output_paths,
     )
+
+
+# each processing module has a get_output function
+def get_output(metadata_dir: str, hecate_output_type: HecateOutput):
+    return _read_metadata_file(metadata_dir, hecate_output_type.value)
 
 
 def detect_shots_and_keyframes(
@@ -90,10 +98,14 @@ def interpret_hecate_output(
     return (shots, keyframes)
 
 
-def write_to_file(shots, keyframes, metadata_dir, fps):
-    shots_times_path = os.path.join(metadata_dir, "shot_boundaries_timestamps_ms.txt")
-    keyframe_indices_path = os.path.join(metadata_dir, "keyframes_indices.txt")
-    keyframe_times_path = os.path.join(metadata_dir, "keyframes_timestamps_ms.txt")
+def _write_to_metadata_file(shots, keyframes, metadata_dir, fps):
+    shots_times_path = os.path.join(metadata_dir, HecateOutput.SHOT_BOUNDARIES.value)
+    keyframe_indices_path = os.path.join(
+        metadata_dir, HecateOutput.KEYFRAME_INDICES.value
+    )
+    keyframe_times_path = os.path.join(
+        metadata_dir, HecateOutput.KEYFRAMES_TIMESTAMPS.value
+    )
     with open(
         shots_times_path,
         "w",
@@ -119,6 +131,20 @@ def write_to_file(shots, keyframes, metadata_dir, fps):
         "keyframe_indices": keyframe_indices_path,
         "keyframes_timestamps": keyframe_times_path,
     }
+
+
+# metadata_dir is the root dir for the hecate module
+# filename is one of KEYFRAME_INDICES_FILE, SHOT_BOUNDARIES_FILE or KEYFRAMES_TIMESTAMPS_FILE
+def _read_metadata_file(metadata_dir: str, file_name: str):
+    file_path = os.path.join(metadata_dir, file_name)
+    if not os.path.exists(file_path):
+        logger.warning(f"Cannot find: {file_path}")
+        return None
+
+    with open(file_path, "r") as f:
+        result = eval(f.read())
+        logger.debug(result)
+    return result
 
 
 def filter_edge_keyframes(keyframe_indices, fps, framecount):

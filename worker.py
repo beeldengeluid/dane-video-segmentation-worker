@@ -357,7 +357,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--run-test-file", action="store", dest="run_test_file", default="n", nargs="?"
     )
-    parser.add_argument("--log", action="store", dest="loglevel", default="DEBUG")
+    parser.add_argument("--log", action="store", dest="loglevel", default="INFO")
     args = parser.parse_args()
 
     # initialises the root logger

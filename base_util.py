@@ -132,11 +132,6 @@ def __validate_parent_dirs(paths: list) -> None:
         raise (e)
 
 
-def get_source_id(input_file_path: str) -> str:
-    fn = os.path.basename(input_file_path)
-    return fn[0 : fn.rfind(".")] if "." in fn else fn
-
-
 # used for hecate
 def run_shell_command(cmd: str) -> bytes:
     """Run cmd and return stdout"""

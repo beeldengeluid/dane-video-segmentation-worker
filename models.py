@@ -12,6 +12,13 @@ class OutputType(Enum):
     TMP = "tmp"  # produced by spectogram.py
 
 
+# Hecate outputs these files into OutputType.METADATA
+class HecateOutput(Enum):
+    KEYFRAME_INDICES = "keyframes_indices.txt"
+    KEYFRAMES_TIMESTAMPS = "keyframes_timestamps_ms.txt"
+    SHOT_BOUNDARIES = "shot_boundaries_timestamps_ms.txt"
+
+
 # returned by callback()
 class CallbackResponse(TypedDict):
     state: int

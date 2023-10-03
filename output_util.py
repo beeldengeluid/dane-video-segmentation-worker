@@ -1,11 +1,38 @@
 import logging
-import shutil
 import os
+import shutil
+from typing import Dict
+
 from dane.config import cfg
 from dane.s3_util import S3Store
+from models import OutputType
 
 
 logger = logging.getLogger(__name__)
+
+
+# returns the basename of the input file path without an extension
+# throughout processing this is then used as a unique ID to keep track of the input/output
+def get_source_id(input_file_path: str) -> str:
+    fn = os.path.basename(input_file_path)
+    return fn[0 : fn.rfind(".")] if "." in fn else fn
+
+
+# below this dir each processing module will put its output data in a subfolder
+def get_base_output_dir(input_file_path: str) -> str:
+    return os.path.join(cfg.VISXP_PREP.OUTPUT_DIR, get_source_id(input_file_path))
+
+
+# for each OutputType a subdir is created inside the base output dir
+def generate_output_dirs(input_file_path: str) -> Dict[str, str]:
+    base_output_dir = get_base_output_dir(input_file_path)
+    output_dirs = {}
+    for output_type in OutputType:
+        output_dir = os.path.join(base_output_dir, output_type.value)
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+        output_dirs[output_type.value] = output_dir
+    return output_dirs
 
 
 # TODO adapt this, so it deletes the VisXP output from the local DANE filesystem
