@@ -3,7 +3,7 @@ import logging
 import os
 from time import time
 from typing import List
-from output_util import get_source_id
+from output_util import get_source_id, get_base_output_dir
 from dane.config import cfg
 from models import Provenance, OutputType
 
@@ -13,6 +13,7 @@ SOFTWARE_PROVENANCE_FILE = "/software_provenance.txt"
 DANE_WORKER_ID = (
     "dane-video-segmentation-worker"  # NOTE: should be same as GH repo name!
 )
+PROVENANCE_FILE = "provenance.json"
 
 
 # Generates a the main Provenance object, which will embed/include the provided provenance_chain
@@ -46,10 +47,9 @@ def generate_full_provenance_chain(
 
 def get_provenance_file(input_file_path: str):
     return os.path.join(
-        cfg.VISXP_PREP.OUTPUT_DIR,
-        get_source_id(input_file_path),
+        get_base_output_dir(get_source_id(input_file_path)),
         OutputType.PROVENANCE.value,
-        "provenance.json",
+        PROVENANCE_FILE,
     )
 
 

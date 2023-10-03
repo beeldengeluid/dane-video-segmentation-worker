@@ -6,7 +6,7 @@ from dane.config import cfg
 import hecate
 import keyframe_extraction
 from models import VisXPFeatureExtractionInput, OutputType, HecateOutput
-from output_util import generate_output_dirs
+from output_util import get_source_id, generate_output_dirs
 from provenance import generate_full_provenance_chain
 import spectogram
 
@@ -21,8 +21,11 @@ def generate_input_for_feature_extraction(
     start_time = time()
     logger.info(f"Processing input: {input_file_path}")
 
+    # Step 0: this is the "processing ID" if you will
+    source_id = get_source_id(input_file_path)
+
     # Step 1: generate output dir per OutputType
-    output_dirs = generate_output_dirs(input_file_path)
+    output_dirs = generate_output_dirs(source_id)
 
     hecate_provenance = None
     keyframe_provenance = None

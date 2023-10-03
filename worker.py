@@ -1,5 +1,4 @@
 import logging
-import ntpath
 import os
 from pathlib import Path
 import requests
@@ -13,7 +12,13 @@ from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
 from models import CallbackResponse, DownloadResult, Provenance
-from output_util import transfer_output, delete_local_output
+from output_util import (
+    transfer_output,
+    delete_local_output,
+    get_base_output_dir,
+    get_source_id,
+    get_download_dir,
+)
 from pika.exceptions import ChannelClosedByBroker
 from main_data_processor import generate_input_for_feature_extraction
 
@@ -44,17 +49,6 @@ class VideoSegmentationWorker(base_worker):
         # Note: base_config is loaded first by DANE,
         # so make sure you overwrite everything in your config.yml!
         try:
-            # put all of the relevant settings in a variable
-            self.BASE_MOUNT: str = config.FILE_SYSTEM.BASE_MOUNT
-
-            # construct the input & output paths using the base mount as a parent dir
-            self.DOWNLOAD_DIR: str = os.path.join(
-                self.BASE_MOUNT, config.FILE_SYSTEM.INPUT_DIR
-            )
-            self.VISXP_OUTPUT_DIR: str = os.path.join(
-                self.BASE_MOUNT, config.FILE_SYSTEM.OUTPUT_DIR
-            )
-
             self.DANE_DEPENDENCIES: list = (
                 config.DANE_DEPENDENCIES if "DANE_DEPENDENCIES" in config else []
             )
@@ -71,7 +65,7 @@ class VideoSegmentationWorker(base_worker):
             sys.exit()
 
         # check if the file system is setup properly
-        if not self.validate_data_dirs(self.DOWNLOAD_DIR, self.VISXP_OUTPUT_DIR):
+        if not self.validate_data_dirs(get_download_dir(), get_base_output_dir()):
             logger.info("ERROR: data dirs not configured properly")
             if not self.UNIT_TESTING:
                 sys.exit()
@@ -180,13 +174,13 @@ class VideoSegmentationWorker(base_worker):
         provenance.steps.append(proc_result.provenance)
 
         # step 5: process returned successfully, generate the output
-        asset_id = self.get_asset_id(input_file)
-        visxp_output_dir = self.get_visxp_output_dir(asset_id)
+        asset_id = get_source_id(input_file)
+        visxp_output_dir = get_base_output_dir(asset_id)
 
         # step 6: transfer the output to S3 (if configured so)
         transfer_success = True
         if self.TRANSFER_OUTPUT_ON_COMPLETION:
-            transfer_success = transfer_output(visxp_output_dir, asset_id)
+            transfer_success = transfer_output(asset_id)
 
         if (
             not transfer_success
@@ -199,7 +193,7 @@ class VideoSegmentationWorker(base_worker):
         # step 7: clear the output files (if configured so)
         delete_success = True
         if self.DELETE_OUTPUT_ON_COMPLETION:
-            delete_success = delete_local_output(visxp_output_dir)
+            delete_success = delete_local_output(asset_id)
 
         if (
             not delete_success
@@ -248,9 +242,9 @@ class VideoSegmentationWorker(base_worker):
 
         # # now remove the "chunked path" from /mnt/dane-fs/input-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234/xyz.mp4
         # try:
-        #     os.chdir(self.DOWNLOAD_DIR)  # cd /mnt/dane-fs/input-files
+        #     os.chdir(get_download_dir())  # cd /mnt/dane-fs/input-files
         #     os.removedirs(
-        #         f".{input_file[len(self.DOWNLOAD_DIR):input_file.rfind(os.sep)]}"
+        #         f".{input_file[len(get_download_dir()):input_file.rfind(os.sep)]}"
         #     )  # /03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
         #     logger.info("Deleted empty input dirs too")
         # except OSError:
@@ -287,21 +281,6 @@ class VideoSegmentationWorker(base_worker):
         )
         r.save(task._id)
 
-    """----------------------------------ID MANAGEMENT FUNCTIONS ---------------------------------"""
-
-    # the file name without extension is used as an asset ID by the container to save the results
-    def get_asset_id(self, input_file: str) -> str:
-        # grab the file_name from the path
-        file_name = ntpath.basename(input_file)
-
-        # split up the file in asset_id (used for creating a subfolder in the output) and extension
-        asset_id, extension = os.path.splitext(file_name)
-        logger.info("working with this asset ID {}".format(asset_id))
-        return asset_id
-
-    def get_visxp_output_dir(self, asset_id: str) -> str:
-        return os.path.join(self.VISXP_OUTPUT_DIR, asset_id)
-
     """----------------------------------DOWNLOAD FUNCTIONS ---------------------------------"""
 
     # https://www.openbeelden.nl/files/29/29494.29451.WEEKNUMMER243-HRE00015742.mp4
@@ -314,7 +293,7 @@ class VideoSegmentationWorker(base_worker):
         fn = os.path.basename(urlparse(doc.target["url"]).path)
         # fn = unquote(fn)
         # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
-        output_file = os.path.join(self.DOWNLOAD_DIR, fn)
+        output_file = os.path.join(get_download_dir(), fn)
         logger.info("saving to file {}".format(fn))
 
         # download if the file is not present (preventing unnecessary downloads)
