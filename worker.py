@@ -1,22 +1,27 @@
-from typing import Optional
+import logging
 import os
-import ntpath
-import sys
 from pathlib import Path
 import requests
-import logging
-from urllib.parse import urlparse
+import sys
 from time import time
+from typing import Optional
+from urllib.parse import urlparse
 
-
+from base_util import validate_config
+from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
-from dane import Document, Task, Result
-from base_util import validate_config, LOG_FORMAT
-from output_util import transfer_output, delete_local_output
-from pika.exceptions import ChannelClosedByBroker
-from visxp_prep import generate_input_for_feature_extraction
 from models import CallbackResponse, DownloadResult, Provenance
+from output_util import (
+    transfer_output,
+    delete_local_output,
+    get_base_output_dir,
+    get_source_id,
+    get_download_dir,
+)
+from pika.exceptions import ChannelClosedByBroker
+from main_data_processor import generate_input_for_feature_extraction
+
 
 """
 NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLDER is not used:
@@ -27,12 +32,6 @@ Instead we put the output in:
 
 - /mnt/dane-fs/output-files/visxp_prep/{asset-id}
 """
-# initialises the root logger
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stdout,  # configure a stream handler only for now (single handler)
-    format=LOG_FORMAT,
-)
 logger = logging.getLogger()
 
 
@@ -50,17 +49,6 @@ class VideoSegmentationWorker(base_worker):
         # Note: base_config is loaded first by DANE,
         # so make sure you overwrite everything in your config.yml!
         try:
-            # put all of the relevant settings in a variable
-            self.BASE_MOUNT: str = config.FILE_SYSTEM.BASE_MOUNT
-
-            # construct the input & output paths using the base mount as a parent dir
-            self.DOWNLOAD_DIR: str = os.path.join(
-                self.BASE_MOUNT, config.FILE_SYSTEM.INPUT_DIR
-            )
-            self.VISXP_OUTPUT_DIR: str = os.path.join(
-                self.BASE_MOUNT, config.FILE_SYSTEM.OUTPUT_DIR
-            )
-
             self.DANE_DEPENDENCIES: list = (
                 config.DANE_DEPENDENCIES if "DANE_DEPENDENCIES" in config else []
             )
@@ -77,7 +65,7 @@ class VideoSegmentationWorker(base_worker):
             sys.exit()
 
         # check if the file system is setup properly
-        if not self.validate_data_dirs(self.DOWNLOAD_DIR, self.VISXP_OUTPUT_DIR):
+        if not self.validate_data_dirs(get_download_dir(), get_base_output_dir()):
             logger.info("ERROR: data dirs not configured properly")
             if not self.UNIT_TESTING:
                 sys.exit()
@@ -86,7 +74,7 @@ class VideoSegmentationWorker(base_worker):
         # listen to the same queue
         self.__queue_name = "VISXP_PREP"  # this is the queue that receives the work and NOT the reply queue
         self.DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
-        self.__binding_key = "#.VISXP_PREP"  # ['Video.ASR', 'Sound.ASR']#'#.ASR'
+        self.__binding_key = "#.VISXP_PREP"  # ['Video.VISXP_PREP', 'Sound.VISXP_PREP']
         self.__depends_on = self.DANE_DEPENDENCIES  # TODO make this part of DANE lib?
 
         if not self.UNIT_TESTING:
@@ -118,13 +106,13 @@ class VideoSegmentationWorker(base_worker):
         # make sure the input and output dirs are there
         try:
             os.makedirs(i_dir, 0o755)
-            logger.info("created ASR input dir: {}".format(i_dir))
+            logger.info("created VisXP input dir: {}".format(i_dir))
         except FileExistsError as e:
             logger.info(e)
 
         try:
             os.makedirs(o_dir, 0o755)
-            logger.info("created ASR output dir: {}".format(o_dir))
+            logger.info("created VisXP output dir: {}".format(o_dir))
         except FileExistsError as e:
             logger.info(e)
 
@@ -181,18 +169,18 @@ class VideoSegmentationWorker(base_worker):
 
         # step 4: raise exception on failure
         if proc_result.state != 200:
-            # something went wrong inside the ASR service, return that response here
+            # something went wrong inside the VisXP work processor, return that response here
             return {"state": proc_result.state, "message": proc_result.message}
         provenance.steps.append(proc_result.provenance)
 
         # step 5: process returned successfully, generate the output
-        asset_id = self.get_asset_id(input_file)
-        visxp_output_dir = self.get_visxp_output_dir(asset_id)
+        asset_id = get_source_id(input_file)
+        visxp_output_dir = get_base_output_dir(asset_id)
 
         # step 6: transfer the output to S3 (if configured so)
         transfer_success = True
         if self.TRANSFER_OUTPUT_ON_COMPLETION:
-            transfer_success = transfer_output(visxp_output_dir, asset_id)
+            transfer_success = transfer_output(asset_id)
 
         if (
             not transfer_success
@@ -205,7 +193,7 @@ class VideoSegmentationWorker(base_worker):
         # step 7: clear the output files (if configured so)
         delete_success = True
         if self.DELETE_OUTPUT_ON_COMPLETION:
-            delete_success = delete_local_output(visxp_output_dir)
+            delete_success = delete_local_output(asset_id)
 
         if (
             not delete_success
@@ -241,7 +229,7 @@ class VideoSegmentationWorker(base_worker):
         # # first remove the input file
         # try:
         #     os.remove(input_file)
-        #     logger.info(f"Deleted ASR input file: {input_file}")
+        #     logger.info(f"Deleted VisXP input file: {input_file}")
         #     # also remove the transcoded mp3 file (if any)
         #     if input_file.find(".mp3") == -1 and input_file.find(".") != -1:
         #         mp3_input_file = f"{input_file[:input_file.rfind('.')]}.mp3"
@@ -254,9 +242,9 @@ class VideoSegmentationWorker(base_worker):
 
         # # now remove the "chunked path" from /mnt/dane-fs/input-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234/xyz.mp4
         # try:
-        #     os.chdir(self.DOWNLOAD_DIR)  # cd /mnt/dane-fs/input-files
+        #     os.chdir(get_download_dir())  # cd /mnt/dane-fs/input-files
         #     os.removedirs(
-        #         f".{input_file[len(self.DOWNLOAD_DIR):input_file.rfind(os.sep)]}"
+        #         f".{input_file[len(get_download_dir()):input_file.rfind(os.sep)]}"
         #     )  # /03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
         #     logger.info("Deleted empty input dirs too")
         # except OSError:
@@ -266,8 +254,7 @@ class VideoSegmentationWorker(base_worker):
 
         return True  # return True even if empty dirs were not removed
 
-    # Note: the supplied transcript is EXACTLY the same as what we use in layer__asr in the collection indices,
-    # meaning it should be quite trivial to append the DANE output into a collection
+    # TODO adapt to VisXP
     def save_to_dane_index(
         self,
         doc: Document,
@@ -294,21 +281,6 @@ class VideoSegmentationWorker(base_worker):
         )
         r.save(task._id)
 
-    """----------------------------------ID MANAGEMENT FUNCTIONS ---------------------------------"""
-
-    # the file name without extension is used as an asset ID by the ASR container to save the results
-    def get_asset_id(self, input_file: str) -> str:
-        # grab the file_name from the path
-        file_name = ntpath.basename(input_file)
-
-        # split up the file in asset_id (used for creating a subfolder in the output) and extension
-        asset_id, extension = os.path.splitext(file_name)
-        logger.info("working with this asset ID {}".format(asset_id))
-        return asset_id
-
-    def get_visxp_output_dir(self, asset_id: str) -> str:
-        return os.path.join(self.VISXP_OUTPUT_DIR, asset_id)
-
     """----------------------------------DOWNLOAD FUNCTIONS ---------------------------------"""
 
     # https://www.openbeelden.nl/files/29/29494.29451.WEEKNUMMER243-HRE00015742.mp4
@@ -321,7 +293,7 @@ class VideoSegmentationWorker(base_worker):
         fn = os.path.basename(urlparse(doc.target["url"]).path)
         # fn = unquote(fn)
         # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
-        output_file = os.path.join(self.DOWNLOAD_DIR, fn)
+        output_file = os.path.join(get_download_dir(), fn)
         logger.info("saving to file {}".format(fn))
 
         # download if the file is not present (preventing unnecessary downloads)
@@ -354,17 +326,54 @@ class VideoSegmentationWorker(base_worker):
 
 
 # Start the worker
+# passing --run-test-file will run the whole process on the file defined in cfg.VISXP_PREP.TEST_FILE
 if __name__ == "__main__":
-    w = VideoSegmentationWorker(cfg)
-    try:
-        w.run()
-    except ChannelClosedByBroker:
-        """
-        (406, 'PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out.
-        Timeout value used: 1800000 ms.
-        This timeout value can be configured, see consumers doc guide to learn more')
-        """
-        logger.critical("Please increase the consumer_timeout in your RabbitMQ server")
-        w.stop()
-    except (KeyboardInterrupt, SystemExit):
-        w.stop()
+    from argparse import ArgumentParser
+    from base_util import LOG_FORMAT
+
+    # first read the CLI arguments
+    parser = ArgumentParser(description="dane-video-segmentation-worker")
+    parser.add_argument(
+        "--run-test-file", action="store", dest="run_test_file", default="n", nargs="?"
+    )
+    parser.add_argument("--log", action="store", dest="loglevel", default="INFO")
+    args = parser.parse_args()
+
+    # initialises the root logger
+    logging.basicConfig(
+        stream=sys.stdout,  # configure a stream handler only for now (single handler)
+        format=LOG_FORMAT,
+    )
+
+    # setting the loglevel
+    log_level = args.loglevel.upper()
+    logger.setLevel(log_level)
+    logger.info(f"Logger initialized (log level: {log_level})")
+    logger.info(f"Got the following CMD line arguments: {args}")
+
+    # see if the test file must be run
+    if args.run_test_file != "n":
+        logger.info("Running main_data_processor with VISXP_PREP.TEST_INPUT_FILE ")
+        if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
+            generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
+        else:
+            logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
+            sys.exit()
+    else:
+        logger.info("Starting the worker")
+        # start the worker
+        w = VideoSegmentationWorker(cfg)
+        try:
+            w.run()
+        except ChannelClosedByBroker:
+            """
+            (406, 'PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out.
+            Timeout value used: 1800000 ms.
+            This timeout value can be configured, see consumers doc guide to learn more')
+            """
+            logger.critical(
+                "Please increase the consumer_timeout in your RabbitMQ server"
+            )
+            w.stop()
+        except (KeyboardInterrupt, SystemExit):
+            w.stop()

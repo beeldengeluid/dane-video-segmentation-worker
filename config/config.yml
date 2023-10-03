@@ -22,12 +22,12 @@ ELASTICSEARCH:
     SCHEME: http
     INDEX: dane-index-k8s-asr
 FILE_SYSTEM:
-    BASE_MOUNT: mount #'mount' when running locally
+    BASE_MOUNT: /data # data when running locally
     INPUT_DIR: input-files
     OUTPUT_DIR: output-files/visxp_prep
 PATHS:
-    TEMP_FOLDER: mount/input-files
-    OUT_FOLDER: mount/output-files
+    TEMP_FOLDER: /data/input-files
+    OUT_FOLDER: /data/output-files
 VISXP_PREP:
     RUN_HECATE: true
     RUN_KEYFRAME_EXTRACTION: true
@@ -36,7 +36,6 @@ VISXP_PREP:
     SPECTOGRAM_SAMPLERATE_HZ:
       - 24000
       - 48000
-    OUTPUT_DIR: /data
     TEST_INPUT_FILE: /data/testob.mp4  # or null
 INPUT:
     DELETE_ON_COMPLETION: True

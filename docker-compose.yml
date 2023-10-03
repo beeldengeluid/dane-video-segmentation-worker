@@ -6,7 +6,7 @@ services:
       - ./data:/data
       - ./config:/root/.DANE
     container_name: visxp
-    # command: --cfg=/mnt/data/config.yml
+    command: --run-test-file  # NOTE: comment this line to spin up th worker
     logging:
       options:
         max-size: 20m

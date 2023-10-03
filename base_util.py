@@ -132,11 +132,6 @@ def __validate_parent_dirs(paths: list) -> None:
         raise (e)
 
 
-def get_source_id(input_file_path: str) -> str:
-    fn = os.path.basename(input_file_path)
-    return fn[0 : fn.rfind(".")] if "." in fn else fn
-
-
 # used for hecate
 def run_shell_command(cmd: str) -> bytes:
     """Run cmd and return stdout"""
@@ -152,30 +147,6 @@ def run_shell_command(cmd: str) -> bytes:
         stdout, stderr = process.communicate()
         logger.info(stdout)
         logger.error(stderr)
-        """
-        while True:
-            if not process.stdout or not process.stderr:
-                logger.warning("no stdout or stderr in process")
-                break
-
-            is_error = False
-
-            # first try to read the stdout
-            line = process.stdout.readline()
-            if not line:  # some processes use stderr instead
-                line = process.stderr.readline()
-                is_error = True
-
-            if line:
-                if is_error:
-                    logger.error(line)
-                else:
-                    logger.info(line)
-            else:
-                logger.info("nothing left in stdout or stderr")
-                break
-        """
-
         logger.info("Process is done: return stdout")
         return stdout
 
