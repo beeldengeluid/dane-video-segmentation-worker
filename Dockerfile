@@ -52,22 +52,24 @@ RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
 # add hecate to the PATH
 ENV PATH="${PATH}:/hecate/distribute/bin"
 
-COPY ./ /src
+# Create dirs for:
+# - Injecting config.yml: /root/.DANE
+# - Mount point for input & output files: /mnt/dane-fs
+# - Storing the source code: /src
+RUN mkdir /root/.DANE /mnt/dane-fs /src
 
-# override this config in Kubernetes with a ConfigMap mounted as a volume to /root/.DANE
-RUN mkdir /root/.DANE
-
-# create the mountpoint for storing /input-files and /output dirs
-RUN mkdir /mnt/dane-fs
+# just copy the requirements.txt so that we can install all the dependencies first
+COPY ./requirements.txt /src
 
 WORKDIR /src
-
 
 # install dependencies
 
 RUN python3.10 -m pip install --upgrade pip
 RUN python3.10 -m pip install -r requirements.txt
 
+# copy the rest into the source dir
+COPY ./ /src
 
 # Write provenance info about software versions to file
 RUN echo "dane-video-segmentation-worker;https://github.com/beeldengeluid/dane-video-segmentation-worker/commit/$(git rev-parse HEAD)" >> /software_provenance.txt && \

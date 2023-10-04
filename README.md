@@ -26,6 +26,18 @@ To make sure the unit-test work as well
 apt-get install ffmpeg
 ```
 
+
+### Config
+
+For local testing, make sure to put a config.yml in the root of this repo:
+
+```
+cp ./config/config.yml config.yml
+```
+
+
+## Relevant links
+
 Also see:
 https://stackoverflow.com/questions/64664094/i-cannot-use-opencv2-and-received-importerror-libgl-so-1-cannot-open-shared-obj
 
