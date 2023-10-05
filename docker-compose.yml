@@ -10,4 +10,4 @@ services:
     logging:
       options:
         max-size: 20m
-    restart: always
+    restart: unless-stopped

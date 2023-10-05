@@ -5,10 +5,9 @@ on:
     branches-ignore:
       - "main"
     paths-ignore:
-      - Dockerfile
-      - .dockerignore
       - README.md
       - LICENSE
+      - docker-compose.yml
 
 jobs:
   test:
