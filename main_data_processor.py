@@ -6,7 +6,10 @@ from dane.config import cfg
 import hecate
 import keyframe_extraction
 from models import VisXPFeatureExtractionInput, OutputType, HecateOutput
-from output_util import get_source_id, generate_output_dirs
+from output_util import (
+    get_source_id,
+    generate_output_dirs,
+)
 from provenance import generate_full_provenance_chain
 import spectogram
 

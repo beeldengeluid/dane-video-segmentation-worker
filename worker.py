@@ -15,6 +15,7 @@ from models import CallbackResponse, DownloadResult, Provenance
 from output_util import (
     transfer_output,
     delete_local_output,
+    delete_input_file,
     get_base_output_dir,
     get_source_id,
     get_download_dir,
@@ -201,7 +202,7 @@ class VideoSegmentationWorker(base_worker):
             logger.warning(f"Could not delete output files: {visxp_output_dir}")
 
         # step 8: clean the input file (if configured so)
-        if not self.cleanup_input_file(input_file, self.DELETE_INPUT_ON_COMPLETION):
+        if not delete_input_file(input_file, self.DELETE_INPUT_ON_COMPLETION):
             return {
                 "state": 500,
                 "message": "Generated a transcript, but could not delete the input file",
@@ -218,41 +219,6 @@ class VideoSegmentationWorker(base_worker):
             "state": 200,
             "message": "Successfully generated VisXP data for the next worker",
         }
-
-    # TODO adapt this function for VisXP
-    def cleanup_input_file(self, input_file: str, actually_delete: bool) -> bool:
-        # logger.info(f"Verifying deletion of input file: {input_file}")
-        # if actually_delete is False:
-        #     logger.info("Configured to leave the input alone, skipping deletion")
-        #     return True
-
-        # # first remove the input file
-        # try:
-        #     os.remove(input_file)
-        #     logger.info(f"Deleted VisXP input file: {input_file}")
-        #     # also remove the transcoded mp3 file (if any)
-        #     if input_file.find(".mp3") == -1 and input_file.find(".") != -1:
-        #         mp3_input_file = f"{input_file[:input_file.rfind('.')]}.mp3"
-        #         if os.path.exists(mp3_input_file):
-        #             os.remove(mp3_input_file)
-        #             logger.info(f"Deleted mp3 transcode file: {mp3_input_file}")
-        # except OSError:
-        #     logger.exception("Could not delete input file")
-        #     return False
-
-        # # now remove the "chunked path" from /mnt/dane-fs/input-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234/xyz.mp4
-        # try:
-        #     os.chdir(get_download_dir())  # cd /mnt/dane-fs/input-files
-        #     os.removedirs(
-        #         f".{input_file[len(get_download_dir()):input_file.rfind(os.sep)]}"
-        #     )  # /03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
-        #     logger.info("Deleted empty input dirs too")
-        # except OSError:
-        #     logger.exception("OSError while removing empty input file dirs")
-        # except FileNotFoundError:
-        #     logger.exception("FileNotFoundError while removing empty input file dirs")
-
-        return True  # return True even if empty dirs were not removed
 
     # TODO adapt to VisXP
     def save_to_dane_index(
