@@ -8,7 +8,9 @@ Including code for extracting keyframes,  extracting audio, and generating spect
 
 ## Installation
 
-Install Hecate following the instructions in https://github.com/yahoo/hecate.
+First, install Hecate following the instructions in https://github.com/yahoo/hecate.
+
+Then: 
 
 ```sh
 poetry install
