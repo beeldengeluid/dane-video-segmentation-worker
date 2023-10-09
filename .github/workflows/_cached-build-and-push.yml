@@ -20,7 +20,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          # context: .
+          # file: ./Dockerfile
           push: true  # https://docs.docker.com/build/ci/github-actions/manage-tags-labels/ (TODO check later)
           tags: "917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker:latest"
           cache-from: type=gha
