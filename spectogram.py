@@ -18,12 +18,12 @@ def run(
     input_file_path: str, keyframe_timestamps: List[int], output_dir: str, tmp_dir: str
 ) -> Provenance:
     start_time = time()
-    logger.info("Extracting audio spectograms now.")
+    logger.info("Extracting audio spectograms")
     sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
 
     spectogram_files = []
     for sample_rate in sample_rates:
-        logger.info(f"Extracting spectograms for {sample_rate}Hz now.")
+        logger.info(f"Extracting {sample_rate}Hz spectograms")
         sf = extract_audio_spectograms(
             media_file=input_file_path,
             keyframe_timestamps=keyframe_timestamps,
