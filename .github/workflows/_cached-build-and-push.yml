@@ -37,7 +37,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # push: true  # https://docs.docker.com/build/ci/github-actions/manage-tags-labels/ (TODO check later)
-          # tags: "917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker:latest"
-          cache-from: type=gha  # https://docs.docker.com/build/cache/backends/registry/ try out registry cache later
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker:buildcache
+          cache-to: type=registry,ref=917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker:buildcache,mode=max
+
+
+# https://docs.docker.com/build/cache/backends/registry/ try out registry cache later
