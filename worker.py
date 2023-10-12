@@ -170,9 +170,16 @@ class VideoSegmentationWorker(base_worker):
 
         # step 4: raise exception on failure
         if proc_result.state != 200:
+            logger.error(f"Could not process the input properly: {proc_result.message}")
+            input_deleted = delete_input_file(
+                input_file, self.DELETE_INPUT_ON_COMPLETION
+            )
+            logger.info(f"Deleted input file of failed process: {input_deleted}")
             # something went wrong inside the VisXP work processor, return that response here
             return {"state": proc_result.state, "message": proc_result.message}
-        provenance.steps.append(proc_result.provenance)
+
+        if proc_result.provenance:
+            provenance.steps.append(proc_result.provenance)
 
         # step 5: process returned successfully, generate the output
         asset_id = get_source_id(input_file)
