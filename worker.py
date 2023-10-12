@@ -321,7 +321,15 @@ if __name__ == "__main__":
     if args.run_test_file != "n":
         logger.info("Running main_data_processor with VISXP_PREP.TEST_INPUT_FILE ")
         if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
-            generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
+            visxp_fe_input = generate_input_for_feature_extraction(
+                cfg.VISXP_PREP.TEST_INPUT_FILE
+            )
+            if visxp_fe_input.provenance:
+                logger.info(
+                    f"Successfully processed example file in {visxp_fe_input.provenance.processing_time_ms}ms"
+                )
+            else:
+                logger.info(f"Error: {visxp_fe_input.state}: {visxp_fe_input.message}")
         else:
             logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
             sys.exit()

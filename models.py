@@ -64,8 +64,7 @@ class DownloadResult:
 class VisXPFeatureExtractionInput:
     state: int
     message: str
-    processing_time: float
-    provenance: Provenance
+    provenance: Optional[Provenance]
 
 
 """ NOTE the output should contain the following dir structure + files
