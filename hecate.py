@@ -30,15 +30,18 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
         sys.exit()
 
     fps = get_fps(input_file_path)
-
-    # filter out the edge cases
-    keyframe_indices = filter_edge_keyframes(
-        keyframe_indices=keyframe_indices,
-        fps=fps,
-        framecount=get_framecount(input_file_path),
-    )
-
     logger.info(f"Framerate is {fps}.")
+
+    if fps > 0:
+        # filter out the edge cases
+        keyframe_indices = filter_edge_keyframes(
+            keyframe_indices=keyframe_indices,
+            fps=fps,
+            framecount=get_framecount(input_file_path),
+        )
+    else:
+        logger.warning("FPS is 0, skipping the filtering of edge cases...")
+
     output_paths = _write_to_metadata_file(
         shot_indices, keyframe_indices, output_dir, fps
     )
@@ -108,7 +111,7 @@ def _write_to_metadata_file(shots, keyframes, metadata_dir, fps):
     )
     with open(
         shots_times_path,
-        "w",
+        "w+",
     ) as f:
         f.write(
             str(
@@ -122,9 +125,9 @@ def _write_to_metadata_file(shots, keyframes, metadata_dir, fps):
             )
         )
 
-    with open(keyframe_indices_path, "w") as f:
+    with open(keyframe_indices_path, "w+") as f:
         f.write(str(keyframes))
-    with open(keyframe_times_path, "w") as f:
+    with open(keyframe_times_path, "w+") as f:
         f.write(str([frame_index_to_timecode(i, fps) for i in keyframes]))
     return {
         "shot_boundaires": shots_times_path,
