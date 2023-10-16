@@ -1,15 +1,12 @@
-import logging
 import numpy as np
-import os
-from pydub import AudioSegment  # type: ignore
-# import tensorflow as tf  # type: ignore
-from time import time
-from typing import List
-import wave
-from dane.config import cfg
-from models import Provenance
 from python_speech_features import logfbank  # type: ignore
 import ffmpeg
+import logging
+import os
+from time import time
+from typing import List
+from dane.config import cfg
+from models import Provenance
 
 logger = logging.getLogger(__name__)
 
@@ -50,16 +47,13 @@ def run(
     )
 
 
-def get_raw_audio(media_file:str, sample_rate:int, z_normalize:bool):
+def get_raw_audio(media_file: str, sample_rate: int):
     out, _ = (
-        ffmpeg
-        .input(media_file)
-        .output('-', format='s16le', acodec='pcm_s16le', ac=1, ar=sample_rate)
+        ffmpeg.input(media_file)
+        .output("-", format="s16le", acodec="pcm_s16le", ac=1, ar=sample_rate)
         .run(quiet=True)
     )
     raw_audio = np.frombuffer(out, np.int16)
-    # if z_normalize:
-    #     raw_audio = (raw_audio - 1.93) / 17.89
     return raw_audio
 
 
@@ -69,16 +63,24 @@ def raw_audio_to_spectograms(
     location: str,
     sample_rate,
     window_size_ms: int = 1000,
+    z_normalize: bool = True,
 ):
     for keyframe in keyframe_timestamps:
-        # TODO: edge case if keyframe is very close to start/end video
+        if (
+            keyframe + window_size_ms / 2 > len(raw_audio)
+            or keyframe < window_size_ms / 2
+        ):
+            logger.info(f"Skipping extraction at {keyframe} ms: too close to the edge.")
+            continue
         from_frame = (keyframe - window_size_ms // 2) * sample_rate // 1000
         to_frame = (keyframe + window_size_ms // 2) * sample_rate // 1000
         logger.info(
             f"Extracting window at {keyframe} ms. Frames {from_frame} to {to_frame}."
         )
         fns = []
-        spectogram = get_spec(raw_audio[from_frame:to_frame], sample_rate)
+        spectogram = get_spec(
+            raw_audio[from_frame:to_frame], sample_rate, z_normalize=z_normalize
+        )
         logger.info(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
         )
@@ -89,20 +91,16 @@ def raw_audio_to_spectograms(
     return fns
 
 
-def get_spec(wav_bit, sample_rate):  
-    spec = logfbank(wav_bit,
-                    sample_rate,
-                    winlen=0.02,
-                    winstep=0.01,
-                    nfilt=257,
-                    nfft=1024
-                    )
-    
+def get_spec(wav_bit: np.ndarray, sample_rate: int, z_normalize: bool):
+    spec = logfbank(
+        wav_bit, sample_rate, winlen=0.02, winstep=0.01, nfilt=257, nfft=1024
+    )
     # Convert to 32-bit float and expand dim
-    spec = spec.astype('float32')
-    spec = spec.T 
+    spec = spec.astype("float32")
+    spec = spec.T
     spec = np.expand_dims(spec, axis=0)
-    spec = (spec - 1.93) / 17.89 # TODO: do z-normalize elsehwere
+    if z_normalize:
+        spec = (spec - 1.93) / 17.89
     # spec = torch.as_tensor(spec) This will be done in the second worker
     # (so that we don't require torch in this one)
     return spec
@@ -117,7 +115,7 @@ def extract_audio_spectograms(
     window_size_ms: int = 1000,
 ):
     logger.info(f"Convert audio to wav at {sample_rate}Hz.")
-    raw_audio = get_raw_audio(media_file=media_file, sample_rate=sample_rate, z_normalize=True)
+    raw_audio = get_raw_audio(media_file=media_file, sample_rate=sample_rate)
     logger.info("obtain spectograms")
     fns = raw_audio_to_spectograms(
         raw_audio=raw_audio,
@@ -125,7 +123,6 @@ def extract_audio_spectograms(
         location=location,
         sample_rate=sample_rate,
         window_size_ms=window_size_ms,
+        z_normalize=True,
     )
     return fns
-
-
