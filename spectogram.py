@@ -2,13 +2,14 @@ import logging
 import numpy as np
 import os
 from pydub import AudioSegment  # type: ignore
-import tensorflow as tf  # type: ignore
+# import tensorflow as tf  # type: ignore
 from time import time
 from typing import List
 import wave
 from dane.config import cfg
 from models import Provenance
-
+from python_speech_features import logfbank  # type: ignore
+import ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -114,9 +115,23 @@ def raw_audio_to_spectrogram(
     return mel_spectrogram
 
 
+def get_raw_audio(media_file:str, sample_rate:int, z_normalize:bool):
+    out, _ = (
+        ffmpeg
+        .input(media_file)
+        .output('-', format='s16le', acodec='pcm_s16le', ac=1, ar=sample_rate)
+        .run(quiet=True)
+    )
+    raw_audio = np.frombuffer(out, np.int16)
+    if z_normalize:
+        raw_audio = (raw_audio - 1.93) / 17.89
+    return raw_audio
+
+
 def wav_to_raw_audio(wav_file_location: str):
     wav_file = wave.open(wav_file_location, "r")
     n_channels, sampwidth, _frame_rate, n_frames = wav_file.getparams()[:4]
+    logger.info(f"Wav framerate is {_frame_rate}.")
     data = wav_file.readframes(n_frames)
     raw_audio = (
         np.frombuffer(data, dtype=np.int16)
@@ -128,8 +143,11 @@ def wav_to_raw_audio(wav_file_location: str):
 
 
 def convert_audiobit_to_wav(media_file: str, target_location: str, sample_rate: int):
+    # audio = AudioSegment.from_file(media_file)
     audio = AudioSegment.from_file(media_file)
-    audio.set_frame_rate(sample_rate)
+    logger.info(f"Converting. Original rate is {audio.frame_rate}")
+    audio = audio.set_frame_rate(sample_rate)
+    audio = audio.set_channels(1)
     audio.export(target_location, format="wav")
 
 
@@ -146,23 +164,15 @@ def raw_audio_to_spectograms(
 
     for keyframe in keyframe_timestamps:
         # TODO: edge case if keyframe is very close to start/end video
+        from_frame = (keyframe - window_size_ms // 2) * sample_rate // 1000
+        to_frame = (keyframe + window_size_ms // 2) * sample_rate // 1000
         logger.info(
-            f"Extracting window at {keyframe} ms. "
-            f"Frames {(keyframe-window_size_ms//2) * sample_rate//1000} "
-            f"to {(keyframe+window_size_ms//2) * sample_rate//1000}."
+            f"Extracting window at {keyframe} ms. Frames {from_frame} to {to_frame}."
         )
         fns = []
-        spectogram = raw_audio_to_spectrogram(
-            raw_audio[
-                :,
-                (keyframe - window_size_ms // 2)
-                * sample_rate
-                // 1000 : (keyframe + window_size_ms // 2)
-                * sample_rate
-                // 1000,
-            ],
-            sample_rate=sample_rate,
-        )
+        audio_bit = raw_audio[from_frame:to_frame]
+        # spectogram = raw_audio_to_spectrogram(audio_bit, sample_rate=sample_rate)
+        spectogram = get_spec(audio_bit, sample_rate)
         logger.info(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
         )
@@ -173,6 +183,24 @@ def raw_audio_to_spectograms(
     return fns
 
 
+def get_spec(wav_bit, sample_rate):  
+    spec = logfbank(wav_bit,
+                    sample_rate,
+                    winlen=0.02,
+                    winstep=0.01,
+                    nfilt=257,
+                    nfft=1024
+                    )
+    
+    # Convert to 32-bit float and expand dim
+    spec = spec.astype('float32')
+    spec = spec.T 
+    spec = np.expand_dims(spec, axis=0)
+    # spec = torch.as_tensor(spec) This will be done in the second worker
+    # (so that we don't require torch in this one)
+    return spec
+
+
 def extract_audio_spectograms(
     media_file: str,
     keyframe_timestamps: list[int],
@@ -181,7 +209,8 @@ def extract_audio_spectograms(
     sample_rate: int = 48000,
     window_size_ms: int = 1000,
 ):
-    logger.info(f"Convert to wav at {sample_rate}Hz.")
+    logger.info(f"Convert audio to wav at {sample_rate}Hz.")
+    raw_audio = get_raw_audio(media_file=media_file, sample_rate=sample_rate, z_normalize=True)
     convert_audiobit_to_wav(
         media_file=media_file,
         target_location=os.path.join(tmp_location, f"output_{sample_rate}.wav"),
@@ -189,10 +218,39 @@ def extract_audio_spectograms(
     )
     logger.info("obtain spectograms")
     fns = raw_audio_to_spectograms(
-        wav_to_raw_audio(os.path.join(tmp_location, f"output_{sample_rate}.wav")),
+        raw_audio=raw_audio,
         keyframe_timestamps=keyframe_timestamps,
         location=location,
         sample_rate=sample_rate,
         window_size_ms=window_size_ms,
     )
     return fns
+
+
+def main():
+    import hecate
+    import sys
+    from models import HecateOutput
+        # initialises the root logger
+    logging.basicConfig(
+        stream=sys.stdout,  # configure a stream handler only for now (single handler)
+        format="%(asctime)s|%(levelname)s|%(process)d|%(module)s|%(funcName)s|%(lineno)d|%(message)s",
+    )
+    logger.info('Going to start')
+    # keyframe_timestamps = hecate.get_output(
+    #          'data/output-files/visxp_prep/ZQWO_DYnq5Q_000000/metadata/', 
+    #          hecate_output_type=HecateOutput.KEYFRAMES_TIMESTAMPS)
+    keyframe_timestamps = [500,1500,2500,3500,4500,5500,6500,7500,8500,9500]
+
+    extract_audio_spectograms(
+            media_file='data/ZQWO_DYnq5Q_000000.mp4',
+            keyframe_timestamps=keyframe_timestamps,
+            location='tmp',
+            tmp_location='tmp',
+            sample_rate=24000,
+            window_size_ms=1000,
+        )
+    
+    
+if __name__ == '__main__': 
+    main()
