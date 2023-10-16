@@ -49,8 +49,8 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
         start_time_unix=start_time,
         processing_time_ms=time() - start_time,
         software_version=obtain_software_versions(["hecate"]),
-        input={"input_file": input_file_path},
-        output=output_paths,
+        input_data={"input_file": input_file_path},
+        output_data=output_paths,
     )
 
 

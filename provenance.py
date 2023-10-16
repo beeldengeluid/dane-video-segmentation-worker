@@ -31,10 +31,10 @@ def generate_full_provenance_chain(
         parameters=cfg.VISXP_PREP,
         steps=provenance_chain,
         software_version=obtain_software_versions([DANE_WORKER_ID]),
-        input={"input_file_path": input_file_path},
-        output=reduce(
+        input_data={"input_file_path": input_file_path},
+        output_data=reduce(
             lambda a, b: {**a, **b},
-            [p.output for p in provenance_chain],
+            [p.output_data for p in provenance_chain],
         ),
     )
 

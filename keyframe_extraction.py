@@ -27,11 +27,11 @@ def run(
         activity_description="Extract keyframes (images) for listed frame indices",
         start_time_unix=start_time,
         processing_time_ms=time() - start_time,
-        input={
+        input_data={
             "input_file_path": input_file_path,
             "keyframe_indices": str(keyframe_indices),
         },
-        output={"Keyframe files": str(keyframe_files)},
+        output_data={"Keyframe files": str(keyframe_files)},
     )
 
 

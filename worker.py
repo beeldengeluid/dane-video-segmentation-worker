@@ -19,6 +19,7 @@ from output_util import (
     get_base_output_dir,
     get_source_id,
     get_download_dir,
+    get_s3_base_url,
 )
 from pika.exceptions import ChannelClosedByBroker
 from main_data_processor import generate_input_for_feature_extraction
@@ -31,7 +32,7 @@ NOTE now the output dir created by by DANE (createDirs()) for the PATHS.OUT_FOLD
 
 Instead we put the output in:
 
-- /mnt/dane-fs/output-files/visxp_prep/{asset-id}
+- /mnt/dane-fs/output-files/visxp_prep/{source_id}
 """
 logger = logging.getLogger()
 
@@ -123,7 +124,7 @@ class VideoSegmentationWorker(base_worker):
 
     # DANE callback function, called whenever there is a job for this worker
     def callback(self, task: Task, doc: Document) -> CallbackResponse:
-        logger.info("Receiving a task from the DANE (mock) server!")
+        logger.info("Receiving a task from the DANE server!")
         logger.info(task)
         logger.info(doc)
 
@@ -133,8 +134,8 @@ class VideoSegmentationWorker(base_worker):
             activity_description="Apply VisXP prep to input media",
             start_time_unix=time(),
             processing_time_ms=-1,
-            input={},
-            output={},
+            input_data={},
+            output_data={},
         )
 
         # step 1: try to fetch the content via the configured DANE download worker
@@ -156,8 +157,8 @@ class VideoSegmentationWorker(base_worker):
             activity_description="Download source media",
             start_time_unix=-1,
             processing_time_ms=download_result.download_time * 1000,
-            input={},
-            output={"file_path": download_result.file_path},
+            input_data={},
+            output_data={"file_path": download_result.file_path},
         )
         if not provenance.steps:
             provenance.steps = []
@@ -182,13 +183,13 @@ class VideoSegmentationWorker(base_worker):
             provenance.steps.append(proc_result.provenance)
 
         # step 5: process returned successfully, generate the output
-        asset_id = get_source_id(input_file)
-        visxp_output_dir = get_base_output_dir(asset_id)
+        source_id = get_source_id(input_file)
+        visxp_output_dir = get_base_output_dir(source_id)
 
         # step 6: transfer the output to S3 (if configured so)
         transfer_success = True
         if self.TRANSFER_OUTPUT_ON_COMPLETION:
-            transfer_success = transfer_output(asset_id)
+            transfer_success = transfer_output(source_id)
 
         if (
             not transfer_success
@@ -201,7 +202,7 @@ class VideoSegmentationWorker(base_worker):
         # step 7: clear the output files (if configured so)
         delete_success = True
         if self.DELETE_OUTPUT_ON_COMPLETION:
-            delete_success = delete_local_output(asset_id)
+            delete_success = delete_local_output(source_id)
 
         if (
             not delete_success
@@ -219,7 +220,7 @@ class VideoSegmentationWorker(base_worker):
         self.save_to_dane_index(
             doc,
             task,
-            visxp_output_dir,  # TODO adapt function and pass whatever is neccesary for VisXP
+            get_s3_base_url(source_id),
             provenance=provenance,
         )
         return {
@@ -232,7 +233,7 @@ class VideoSegmentationWorker(base_worker):
         self,
         doc: Document,
         task: Task,
-        visxp_output_dir: str,
+        s3_location: str,
         provenance: Provenance,
     ) -> None:
         logger.info("saving results to DANE, task id={0}".format(task._id))
@@ -240,15 +241,12 @@ class VideoSegmentationWorker(base_worker):
         r = Result(
             self.generator,
             payload={
-                # "transcript": transcript,
-                # "visxp_output_dir": visxp_output_dir,
-                # "doc_id": doc._id,
-                # "task_id": task._id if task else None,  # TODO add this as well
-                # "doc_target_id": doc.target["id"],
-                # "doc_target_url": doc.target["url"],
-                "provenance": provenance.to_json()
-                # if provenance
-                # else None,  # TODO test this
+                "doc_id": doc._id,
+                "task_id": task._id if task else None,
+                "doc_target_id": doc.target["id"],
+                "doc_target_url": doc.target["url"],
+                "s3_location": s3_location,
+                "provenance": provenance.to_json(),
             },
             api=self.handler,
         )
