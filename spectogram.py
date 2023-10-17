@@ -1,6 +1,6 @@
 import numpy as np
 from python_speech_features import logfbank  # type: ignore
-import ffmpeg
+import ffmpeg  # type: ignore
 import logging
 import os
 from time import time
