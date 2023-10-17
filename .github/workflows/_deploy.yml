@@ -11,4 +11,6 @@ jobs:
   deploy-ecr:
     if: ${{ inputs.target == 'ecr' }}
     uses: ./.github/workflows/_build-push-cached-ecr.yml
-    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
