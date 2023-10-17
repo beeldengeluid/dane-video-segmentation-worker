@@ -9,17 +9,6 @@ jobs:
     steps:  # TODO extract tags based on git events, so they can be used in build-and-push
       - name: Checkout code for extracting tag information
         uses: actions/checkout@v4
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          # list of Docker images to use as base name for tags
-          images: |
-            917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -32,6 +21,16 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: ${{ steps.login-ecr.outputs.registry }}/dane-video-segmentation-worker
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
