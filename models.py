@@ -25,14 +25,15 @@ class CallbackResponse(TypedDict):
     message: str
 
 
+# NOTE https://stackoverflow.com/questions/20670732/is-input-a-keyword-in-python
 @dataclass
 class Provenance:
     activity_name: str
     activity_description: str
     start_time_unix: float
     processing_time_ms: float
-    input: dict[str, str]
-    output: dict[str, str]
+    input_data: dict[str, str]
+    output_data: dict[str, str]
     parameters: Optional[dict] = None
     software_version: Optional[dict[str, str]] = None
     steps: Optional[list["Provenance"]] = None  # a list of subactivity provenance items
@@ -45,8 +46,8 @@ class Provenance:
             "start_time_unix": self.start_time_unix,
             "parameters": self.parameters,  # .to_json
             "software_version": self.software_version,  # .to_json
-            "input": self.input,  # .to_json
-            "output": self.output,  # .to_json
+            "input_data": self.input_data,  # .to_json
+            "output_data": self.output_data,  # .to_json
             "steps": [step.to_json for step in self.steps],
         }
 
@@ -64,8 +65,7 @@ class DownloadResult:
 class VisXPFeatureExtractionInput:
     state: int
     message: str
-    processing_time: float
-    provenance: Provenance
+    provenance: Optional[Provenance]
 
 
 """ NOTE the output should contain the following dir structure + files

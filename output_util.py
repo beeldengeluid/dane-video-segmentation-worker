@@ -13,6 +13,7 @@ S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.KEYFRAMES,
     OutputType.SPECTOGRAMS,
     OutputType.PROVENANCE,
+    OutputType.METADATA,
 ]  # only upload this output to S3
 
 
@@ -110,6 +111,10 @@ def transfer_output(source_id: str) -> bool:
             )
             return False
     return True
+
+
+def get_s3_base_url(source_id: str) -> str:
+    return f"s3://{os.path.join(cfg.OUTPUT.S3_BUCKET, cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id)}"
 
 
 def obtain_files_to_upload_to_s3(output_dir: str) -> List[str]:

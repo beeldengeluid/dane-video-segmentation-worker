@@ -39,11 +39,11 @@ def run(
         ),
         start_time_unix=start_time,
         processing_time_ms=time() - start_time,
-        input={
+        input_data={
             "input_file_path": input_file_path,
             "keyframe_timestamps": str(keyframe_timestamps),
         },
-        output={"spectogram_files": str(spectogram_files)},
+        output_data={"spectogram_files": str(spectogram_files)},
     )
 
 

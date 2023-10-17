@@ -10,6 +10,5 @@ on:
 jobs:
   deploy-ecr:
     if: ${{ inputs.target == 'ecr' }}
-    #uses: ./.github/workflows/_build-and-push-ecr.yml
-    uses: ./.github/workflows/_cached-build-and-push.yml
+    uses: ./.github/workflows/_build-push-cached-ecr.yml
     secrets: inherit

@@ -27,11 +27,11 @@ def run(
         activity_description="Extract keyframes (images) for listed frame indices",
         start_time_unix=start_time,
         processing_time_ms=time() - start_time,
-        input={
+        input_data={
             "input_file_path": input_file_path,
             "keyframe_indices": str(keyframe_indices),
         },
-        output={"Keyframe files": str(keyframe_files)},
+        output_data={"Keyframe files": str(keyframe_files)},
     )
 
 
@@ -64,11 +64,13 @@ def extract_keyframes(
     return fns
 
 
-def get_fps(media_file):
+def get_fps(media_file: str):
+    logger.info(f"Getting FPS of: {media_file}")
     return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FPS)
 
 
-def get_framecount(media_file):
+def get_framecount(media_file: str):
+    logger.info(f"Getting frame count of: {media_file}")
     return cv2.VideoCapture(media_file).get(cv2.CAP_PROP_FRAME_COUNT)
 
 

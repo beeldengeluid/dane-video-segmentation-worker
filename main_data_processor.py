@@ -1,5 +1,4 @@
 import logging
-import sys
 from time import time
 
 from dane.config import cfg
@@ -45,7 +44,9 @@ def generate_input_for_feature_extraction(
         )
         if not keyframe_indices:
             logger.error("Could not find keyframe_indices")
-            sys.exit()
+            return VisXPFeatureExtractionInput(
+                500, "Could not find keyframe_indices", None
+            )
 
         keyframe_provenance = keyframe_extraction.run(
             input_file_path, keyframe_indices, output_dirs[OutputType.KEYFRAMES.value]
@@ -57,7 +58,9 @@ def generate_input_for_feature_extraction(
         )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")
-            sys.exit()
+            return VisXPFeatureExtractionInput(
+                500, "Could not find keyframe_timestamps", None
+            )
 
         spectogram_provenance = spectogram.run(
             input_file_path,
@@ -77,4 +80,6 @@ def generate_input_for_feature_extraction(
         ],
     )
 
-    return VisXPFeatureExtractionInput(500, "Not implemented yet!", -1, provenance)
+    return VisXPFeatureExtractionInput(
+        200, "Succesfully generated input for VisXP feature extraction", provenance
+    )
