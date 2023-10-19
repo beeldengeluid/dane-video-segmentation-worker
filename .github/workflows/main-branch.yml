@@ -13,7 +13,9 @@ jobs:
   test:
     uses: ./.github/workflows/_test.yml
 
-  build-and-push-ecr:
-    uses: ./.github/workflows/_build-push-cached-ecr.yml
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
     secrets: inherit
     needs: [test]
+    with:
+      target: ecr

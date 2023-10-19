@@ -5,72 +5,33 @@ on:
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
-    steps:  # TODO extract tags based on git events, so they can be used in build-and-push
-      - name: Checkout code for extracting tag information
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Docker meta
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::917951871879:role/GitHubActionsBgOrg
+          aws-region: eu-west-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Compile metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          # list of Docker images to use as base name for tags
-          images: |
-            917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker
-          # generate Docker tags based on the following events/attributes
+          images: ${{ steps.login-ecr.outputs.registry }}/dane-video-segmentation-worker
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to ECR
-        uses: docker/login-action@v3
-        with:  # https://github.com/docker/login-action#aws-elastic-container-registry-ecr
-          registry: 917951871879.dkr.ecr.eu-west-1.amazonaws.com
-          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
-          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # cache-from: type=registry,ref=917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker:buildcache
-          # cache-to: type=registry,ref=917951871879.dkr.ecr.eu-west-1.amazonaws.com/dane-video-segmentation-worker:buildcache,mode=max
-
-# registry cache does not work properly yet with ECR: https://github.com/aws/containers-roadmap/issues/876
-
-# https://docs.docker.com/build/cache/backends/registry/ try out registry cache later
-
-# Sample workflow to access AWS resources when workflow is tied to branch
-# The workflow Creates static website using aws s3
-# name: AWS example workflow
-# on:
-#   push
-# env:
-#   BUCKET_NAME : "<example-bucket-name>"
-#   AWS_REGION : "<example-aws-region>"
-# # permission can be added at job level or workflow level
-# permissions:
-#   id-token: write   # This is required for requesting the JWT
-#   contents: read    # This is required for actions/checkout
-# jobs:
-#   S3PackageUpload:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Git clone the repository
-#         uses: actions/checkout@v4
-#       - name: configure aws credentials
-#         uses: aws-actions/configure-aws-credentials@v3
-#         with:
-#           role-to-assume: arn:aws:iam::1234567890:role/example-role
-#           role-session-name: samplerolesession
-#           aws-region: ${{ env.AWS_REGION }}
-#       # Upload a file to AWS s3
-#       - name:  Copy index.html to s3
-#         run: |
-#           aws s3 cp ./index.html s3://${{ env.BUCKET_NAME }}/
