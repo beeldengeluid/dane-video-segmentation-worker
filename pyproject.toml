@@ -70,6 +70,5 @@ module = [
   'yaml',
   'yacs.*',
   'numpy',
-  'pydub',
 ]
 ignore_missing_imports = true
