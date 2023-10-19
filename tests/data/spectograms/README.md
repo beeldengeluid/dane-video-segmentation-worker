@@ -1,1 +1,0 @@
-used by the spectogram unit test to temporarily store spectograms generated in spectogram_util_test.py

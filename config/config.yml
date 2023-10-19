@@ -35,8 +35,7 @@ VISXP_PREP:
     SPECTOGRAM_WINDOW_SIZE_MS: 1000
     SPECTOGRAM_SAMPLERATE_HZ:
         - 24000
-        - 48000
-    TEST_INPUT_FILE: /data/testob.mp4  # or null
+    TEST_INPUT_FILE: /data/testob.mp4
 INPUT:
     DELETE_ON_COMPLETION: True
 OUTPUT:
