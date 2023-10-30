@@ -9,3 +9,4 @@ __pycache__
 pyproject.toml
 poetry.lock
 /tests
+s3-creds.env

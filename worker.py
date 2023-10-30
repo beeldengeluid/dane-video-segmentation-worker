@@ -13,16 +13,16 @@ from dane.base_classes import base_worker
 from dane.config import cfg
 from models import CallbackResponse, DownloadResult, Provenance
 from output_util import (
-    transfer_output,
-    delete_local_output,
-    delete_input_file,
     get_base_output_dir,
     get_source_id,
     get_download_dir,
     get_s3_base_url,
 )
 from pika.exceptions import ChannelClosedByBroker
-from main_data_processor import generate_input_for_feature_extraction
+from main_data_processor import (
+    generate_input_for_feature_extraction,
+    apply_desired_io_on_output,
+)
 
 
 """
@@ -164,69 +164,34 @@ class VideoSegmentationWorker(base_worker):
             provenance.steps = []
         provenance.steps.append(download_provenance)
 
-        input_file = download_result.file_path
+        input_file_path = download_result.file_path
 
         # step 3: submit the input file to hecate/etc
-        proc_result = generate_input_for_feature_extraction(input_file)
-
-        # step 4: raise exception on failure
-        if proc_result.state != 200:
-            logger.error(f"Could not process the input properly: {proc_result.message}")
-            input_deleted = delete_input_file(
-                input_file, self.DELETE_INPUT_ON_COMPLETION
-            )
-            logger.info(f"Deleted input file of failed process: {input_deleted}")
-            # something went wrong inside the VisXP work processor, return that response here
-            return {"state": proc_result.state, "message": proc_result.message}
+        proc_result = generate_input_for_feature_extraction(input_file_path)
 
         if proc_result.provenance:
             provenance.steps.append(proc_result.provenance)
 
-        # step 5: process returned successfully, generate the output
-        source_id = get_source_id(input_file)
-        visxp_output_dir = get_base_output_dir(source_id)
-
-        # step 6: transfer the output to S3 (if configured so)
-        transfer_success = True
-        if self.TRANSFER_OUTPUT_ON_COMPLETION:
-            transfer_success = transfer_output(source_id)
-
-        if (
-            not transfer_success
-        ):  # failure of transfer, impedes the workflow, so return error
-            return {
-                "state": 500,
-                "message": "Failed to transfer output to S3",
-            }
-
-        # step 7: clear the output files (if configured so)
-        delete_success = True
-        if self.DELETE_OUTPUT_ON_COMPLETION:
-            delete_success = delete_local_output(source_id)
-
-        if (
-            not delete_success
-        ):  # NOTE: just a warning for now, but one to keep an EYE out for
-            logger.warning(f"Could not delete output files: {visxp_output_dir}")
-
-        # step 8: clean the input file (if configured so)
-        if not delete_input_file(input_file, self.DELETE_INPUT_ON_COMPLETION):
-            return {
-                "state": 500,
-                "message": "Generated a transcript, but could not delete the input file",
-            }
-
-        # step 9: save the results back to the DANE index
-        self.save_to_dane_index(
-            doc,
-            task,
-            get_s3_base_url(source_id),
-            provenance=provenance,
+        validated_output: CallbackResponse = apply_desired_io_on_output(
+            input_file_path,
+            proc_result,
+            self.DELETE_INPUT_ON_COMPLETION,
+            self.DELETE_OUTPUT_ON_COMPLETION,
+            self.TRANSFER_OUTPUT_ON_COMPLETION,
         )
-        return {
-            "state": 200,
-            "message": "Successfully generated VisXP data for the next worker",
-        }
+
+        if validated_output.get("state", 500) == 200:
+            logger.info(
+                "applying IO on output went well, now finally saving to DANE index"
+            )
+            # step 9: save the results back to the DANE index
+            self.save_to_dane_index(
+                doc,
+                task,
+                get_s3_base_url(get_source_id(input_file_path)),
+                provenance=provenance,
+            )
+        return validated_output
 
     def save_to_dane_index(
         self,
@@ -325,15 +290,23 @@ if __name__ == "__main__":
     if args.run_test_file != "n":
         logger.info("Running main_data_processor with VISXP_PREP.TEST_INPUT_FILE ")
         if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
-            visxp_fe_input = generate_input_for_feature_extraction(
+            proc_result = generate_input_for_feature_extraction(
                 cfg.VISXP_PREP.TEST_INPUT_FILE
             )
-            if visxp_fe_input.provenance:
+            if proc_result.provenance:
                 logger.info(
-                    f"Successfully processed example file in {visxp_fe_input.provenance.processing_time_ms}ms"
+                    f"Successfully processed example file in {proc_result.provenance.processing_time_ms}ms"
+                )
+                logger.info("Result ok, now applying the desired IO on the results")
+                validated_output: CallbackResponse = apply_desired_io_on_output(
+                    cfg.VISXP_PREP.TEST_INPUT_FILE,
+                    proc_result,
+                    cfg.INPUT.DELETE_ON_COMPLETION,
+                    cfg.OUTPUT.DELETE_ON_COMPLETION,
+                    cfg.OUTPUT.TRANSFER_ON_COMPLETION,
                 )
             else:
-                logger.info(f"Error: {visxp_fe_input.state}: {visxp_fe_input.message}")
+                logger.info(f"Error: {proc_result.state}: {proc_result.message}")
         else:
             logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
             sys.exit()
