@@ -1,4 +1,5 @@
 from functools import reduce
+import json
 import logging
 import os
 from time import time
@@ -39,8 +40,11 @@ def generate_full_provenance_chain(
     )
 
     output_file = get_provenance_file(input_file_path)
-    with open(output_file, "w+") as f:
-        f.write(str(provenance.to_json()))
+    fdata = provenance.to_json()
+    logger.info("Going to write the following to disk:")
+    logger.info(fdata)
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(fdata, f, ensure_ascii=False, indent=4)
         logger.info(f"Wrote provenance info to file: {output_file}")
     return provenance
 

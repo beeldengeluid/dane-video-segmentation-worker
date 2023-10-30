@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, Dict
 
 
 # These are the types of output this worker (possibly) provides (depending on configuration)
@@ -35,8 +35,8 @@ class Provenance:
     input_data: dict[str, str]
     output_data: dict[str, str]
     parameters: Optional[dict] = None
-    software_version: Optional[dict[str, str]] = None
-    steps: Optional[list["Provenance"]] = None  # a list of subactivity provenance items
+    software_version: Optional[Dict[str, str]] = None
+    steps: Optional[list["Provenance"]] = field(default_factory=list["Provenance"])
 
     def to_json(self):
         return {
@@ -48,7 +48,7 @@ class Provenance:
             "software_version": self.software_version,  # .to_json
             "input_data": self.input_data,  # .to_json
             "output_data": self.output_data,  # .to_json
-            "steps": [step.to_json for step in self.steps],
+            "steps": [step.to_json() for step in self.steps],
         }
 
 
