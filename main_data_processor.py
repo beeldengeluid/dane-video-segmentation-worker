@@ -25,7 +25,7 @@ import spectogram
 logger = logging.getLogger(__name__)
 
 
-# TODO call this from the worker and start the actual processing of the input
+# generates all the required output for the 2nd DANE worker
 def generate_input_for_feature_extraction(
     input_file_path: str,
 ) -> VisXPFeatureExtractionInput:
@@ -93,7 +93,7 @@ def generate_input_for_feature_extraction(
         200, "Succesfully generated input for VisXP feature extraction", provenance
     )
 
-
+# assesses the output and makes sure input & output is handled properly
 def apply_desired_io_on_output(
     input_file: str,
     proc_result: VisXPFeatureExtractionInput,

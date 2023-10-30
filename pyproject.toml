@@ -14,7 +14,7 @@ opencv-python = "^4.8.0.76"
 python_speech_features = { git = "https://github.com/jameslyons/python_speech_features.git"}
 numpy = "^1.24.3"
 ffmpeg-python = "^0.2.0"
-dane = {git = "https://git@github.com/CLARIAH/DANE.git", rev = "s3_util_extend"}
+dane = "^0.3.9"
 
 
 [tool.poetry.group.dev.dependencies]

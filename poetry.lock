@@ -292,27 +292,23 @@ toml = ["tomli"]
 
 [[package]]
 name = "dane"
-version = "0.3.8"
+version = "0.3.9"
 description = "Utils for working with the Distributed Annotation and Enrichment system"
 category = "main"
 optional = false
-python-versions = "^3.10"
-files = []
-develop = false
+python-versions = ">=3.10,<4.0"
+files = [
+    {file = "dane-0.3.9-py3-none-any.whl", hash = "sha256:2a8634f14106e86b5059e36ea4a4e027fcc4d60bc752412fc280be665938f814"},
+    {file = "dane-0.3.9.tar.gz", hash = "sha256:c050756d58ec1268cecc73c5fd0cdf80092dd742b3b316a0fffb2bebf63a5f64"},
+]
 
 [package.dependencies]
-boto3 = "^1.26.155"
-elasticsearch7 = "^7.17.7"
-pika = "^1.3.1"
-requests = "^2.28.1"
-urllib3 = "^1.26.12"
-yacs = "^0.1.8"
-
-[package.source]
-type = "git"
-url = "https://git@github.com/CLARIAH/DANE.git"
-reference = "s3_util_extend"
-resolved_reference = "b15b2e961fdeaabfbca52ab3822b03c8a6cb560b"
+boto3 = ">=1.26.155,<2.0.0"
+elasticsearch7 = ">=7.17.7,<8.0.0"
+pika = ">=1.3.1,<2.0.0"
+requests = ">=2.28.1,<3.0.0"
+urllib3 = ">=1.26.12,<2.0.0"
+yacs = ">=0.1.8,<0.2.0"
 
 [[package]]
 name = "elasticsearch7"
@@ -968,4 +964,4 @@ PyYAML = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1be47e58067092ab974fc1bc289926c7773f64ffff33f078f319d26d1b701d02"
+content-hash = "dea97119dbf27e87d01d23149e594bb8eaf6492fe870c7bbab0fd4a0cc737a6a"
