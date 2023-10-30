@@ -228,7 +228,6 @@ class VideoSegmentationWorker(base_worker):
             "message": "Successfully generated VisXP data for the next worker",
         }
 
-    # TODO adapt to VisXP
     def save_to_dane_index(
         self,
         doc: Document,
