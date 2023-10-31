@@ -75,11 +75,7 @@ def _is_valid_visxp_output(output_dir: str) -> bool:
     return os.path.exists(os.path.join(output_dir, OutputType.PROVENANCE.value))
 
 
-# TODO arrange an S3 bucket to store the VisXP results in
-# TODO finish implementation to whatever is needed for VisXP files
-def transfer_output(source_id: str) -> bool:
-    output_dir = get_base_output_dir(source_id)
-    logger.info(f"Transferring {output_dir} to S3 (asset={source_id})")
+def _validate_transfer_config() -> bool:
     if any(
         [
             not x
@@ -94,22 +90,31 @@ def transfer_output(source_id: str) -> bool:
             "TRANSFER_ON_COMPLETION configured without all the necessary S3 settings"
         )
         return False
+    return True
+
+
+# TODO adapt, so it simply tars all S3_OUTPUT_TYPES and uploads this single file
+def transfer_output(source_id: str) -> bool:
+    output_dir = get_base_output_dir(source_id)
+    logger.info(f"Transferring {output_dir} to S3 (asset={source_id})")
+    if not _validate_transfer_config():
+        return False
 
     s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
-    for output_type in S3_OUTPUT_TYPES:
-        output_sub_dir = os.path.join(output_dir, output_type.value)
-        success = s3.transfer_to_s3(
-            cfg.OUTPUT.S3_BUCKET,
-            os.path.join(
-                cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id, output_type.value
-            ),  # assets/<program ID>__<carrier ID>/spectograms|keyframes|provenance
-            obtain_files_to_upload_to_s3(output_sub_dir),
-        )
-        if not success:
-            logger.error(
-                f"Failed to upload output folder: {output_sub_dir}, aborting rest of upload"
-            )
-            return False
+    file_list = [os.path.join(output_dir, ot.value) for ot in S3_OUTPUT_TYPES]
+    tar_file = os.path.join(output_dir, "visxp_prep.tar.gz")
+
+    success = s3.transfer_to_s3(
+        cfg.OUTPUT.S3_BUCKET,
+        os.path.join(
+            cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id
+        ),  # assets/<program ID>__<carrier ID>
+        file_list,  # this list of subdirs will be compressed into the tar below
+        tar_file,  # this file will be uploaded
+    )
+    if not success:
+        logger.error(f"Failed to upload: {tar_file}")
+        return False
     return True
 
 
