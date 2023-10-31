@@ -1,14 +1,19 @@
 import logging
 import os
+import requests
 import shutil
-from typing import Dict, List
+from time import time
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
+from dane import Document
 from dane.config import cfg
 from dane.s3_util import S3Store
-from models import OutputType
+from models import OutputType, DownloadResult, Provenance
 
 
 logger = logging.getLogger(__name__)
+DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
 S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.KEYFRAMES,
     OutputType.SPECTOGRAMS,
@@ -30,10 +35,6 @@ def get_base_output_dir(source_id: str = "") -> str:
     if source_id:
         path_elements.append(source_id)
     return os.path.join(*path_elements)
-
-
-def get_download_dir():
-    return os.path.join(cfg.FILE_SYSTEM.BASE_MOUNT, cfg.FILE_SYSTEM.INPUT_DIR)
 
 
 # for each OutputType a subdir is created inside the base output dir
@@ -158,3 +159,75 @@ def delete_input_file(input_file: str, actually_delete: bool) -> bool:
         logger.exception("FileNotFoundError while removing empty input file dirs")
 
     return True  # return True even if empty dirs were not removed
+
+
+def get_download_dir():
+    return os.path.join(cfg.FILE_SYSTEM.BASE_MOUNT, cfg.FILE_SYSTEM.INPUT_DIR)
+
+
+def obtain_input_file(
+    handler, doc: Document
+) -> Tuple[Optional[DownloadResult], Optional[Provenance]]:
+    # step 1: try to fetch the content via the configured DANE download worker
+    download_result = _fetch_downloaded_content(handler, doc)
+
+    # step 2: try to download the file if no DANE download worker was configured
+    if download_result is None:
+        logger.info(
+            "The file was not downloaded by the DANE worker, downloading it myself..."
+        )
+        download_result = _download_content(doc)
+        if download_result:
+            download_provenance = Provenance(
+                activity_name="download",
+                activity_description="Download source media",
+                start_time_unix=-1,
+                processing_time_ms=download_result.download_time * 1000,
+                input_data={},
+                output_data={"file_path": download_result.file_path},
+            )
+            return download_result, download_provenance
+    return None, None
+
+
+# https://www.openbeelden.nl/files/29/29494.29451.WEEKNUMMER243-HRE00015742.mp4
+def _download_content(doc: Document) -> Optional[DownloadResult]:
+    if not doc.target or "url" not in doc.target or not doc.target["url"]:
+        logger.info("No url found in DANE doc")
+        return None
+
+    logger.info("downloading {}".format(doc.target["url"]))
+    fn = os.path.basename(urlparse(doc.target["url"]).path)
+    # fn = unquote(fn)
+    # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
+    output_file = os.path.join(get_download_dir(), fn)
+    logger.info("saving to file {}".format(fn))
+
+    # download if the file is not present (preventing unnecessary downloads)
+    start_time = time()
+    if not os.path.exists(output_file):
+        with open(output_file, "wb") as file:
+            response = requests.get(doc.target["url"])
+            file.write(response.content)
+            file.close()
+    download_time = time() - start_time
+    return DownloadResult(
+        fn,  # NOTE or output_file? hmmm
+        download_time,  # TODO add mime_type and content_length
+    )
+
+
+def _fetch_downloaded_content(handler, doc: Document) -> Optional[DownloadResult]:
+    logger.info("checking download worker output")
+    possibles = handler.searchResult(doc._id, DANE_DOWNLOAD_TASK_KEY)
+    logger.info(possibles)
+    # NOTE now MUST use the latest dane-beng-download-worker or dane-download-worker
+    if len(possibles) > 0 and "file_path" in possibles[0].payload:
+        return DownloadResult(
+            possibles[0].payload.get("file_path"),
+            possibles[0].payload.get("download_time", -1),
+            possibles[0].payload.get("mime_type", "unknown"),
+            possibles[0].payload.get("content_length", -1),
+        )
+    logger.error("No file_path found in download result")
+    return None

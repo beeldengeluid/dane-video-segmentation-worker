@@ -2,7 +2,7 @@ import pytest
 import shutil
 from spectogram import extract_audio_spectograms
 import os
-from output_util import get_source_id
+from io_util import get_source_id
 import numpy as np
 
 MP4_INPUT_DIR = (
