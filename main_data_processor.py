@@ -93,6 +93,7 @@ def generate_input_for_feature_extraction(
         200, "Succesfully generated input for VisXP feature extraction", provenance
     )
 
+
 # assesses the output and makes sure input & output is handled properly
 def apply_desired_io_on_output(
     input_file: str,
