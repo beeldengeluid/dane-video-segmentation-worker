@@ -4,7 +4,7 @@ import logging
 import os
 from time import time
 from typing import List
-from output_util import get_source_id, get_base_output_dir
+from io_util import get_source_id, get_base_output_dir
 from dane.config import cfg
 from models import Provenance, OutputType
 

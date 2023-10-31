@@ -1,22 +1,20 @@
 import logging
 import os
 from pathlib import Path
-import requests
 import sys
 from time import time
-from typing import Optional
-from urllib.parse import urlparse
 
 from base_util import validate_config
 from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
-from models import CallbackResponse, DownloadResult, Provenance
-from output_util import (
+from models import CallbackResponse, Provenance
+from io_util import (
     get_base_output_dir,
     get_source_id,
-    get_download_dir,
     get_s3_base_url,
+    obtain_input_file,
+    get_download_dir,
 )
 from pika.exceptions import ChannelClosedByBroker
 from main_data_processor import (
@@ -75,7 +73,6 @@ class VideoSegmentationWorker(base_worker):
         # we specify a queue name because every worker of this type should
         # listen to the same queue
         self.__queue_name = "VISXP_PREP"  # this is the queue that receives the work and NOT the reply queue
-        self.DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
         self.__binding_key = "#.VISXP_PREP"  # ['Video.VISXP_PREP', 'Sound.VISXP_PREP']
         self.__depends_on = self.DANE_DEPENDENCIES  # TODO make this part of DANE lib?
 
@@ -136,40 +133,25 @@ class VideoSegmentationWorker(base_worker):
             processing_time_ms=-1,
             input_data={},
             output_data={},
+            steps=[],
         )
 
-        # step 1: try to fetch the content via the configured DANE download worker
-        download_result = self.fetch_downloaded_content(doc)
-
-        # step 2: try to download the file if no DANE download worker was configured
-        if download_result is None:
-            logger.info(
-                "The file was not downloaded by the DANE worker, downloading it myself..."
-            )
-            download_result = self.download_content(doc)
-            if download_result is None:
-                return {
-                    "state": 500,
-                    "message": "Could not download the document content",
-                }
-        download_provenance = Provenance(
-            activity_name="download",
-            activity_description="Download source media",
-            start_time_unix=-1,
-            processing_time_ms=download_result.download_time * 1000,
-            input_data={},
-            output_data={"file_path": download_result.file_path},
-        )
-        if not provenance.steps:
-            provenance.steps = []
-        provenance.steps.append(download_provenance)
+        # obtain the input file
+        download_result, download_provenance = obtain_input_file(self.handler, doc)
+        if not download_result:
+            return {
+                "state": 500,
+                "message": "Could not download the document content",
+            }
+        if download_provenance and provenance.steps:
+            provenance.steps.append(download_provenance)
 
         input_file_path = download_result.file_path
 
         # step 3: submit the input file to hecate/etc
         proc_result = generate_input_for_feature_extraction(input_file_path)
 
-        if proc_result.provenance:
+        if proc_result.provenance and provenance.steps:
             provenance.steps.append(proc_result.provenance)
 
         validated_output: CallbackResponse = apply_desired_io_on_output(
@@ -215,49 +197,6 @@ class VideoSegmentationWorker(base_worker):
             api=self.handler,
         )
         r.save(task._id)
-
-    """----------------------------------DOWNLOAD FUNCTIONS ---------------------------------"""
-
-    # https://www.openbeelden.nl/files/29/29494.29451.WEEKNUMMER243-HRE00015742.mp4
-    def download_content(self, doc: Document) -> Optional[DownloadResult]:
-        if not doc.target or "url" not in doc.target or not doc.target["url"]:
-            logger.info("No url found in DANE doc")
-            return None
-
-        logger.info("downloading {}".format(doc.target["url"]))
-        fn = os.path.basename(urlparse(doc.target["url"]).path)
-        # fn = unquote(fn)
-        # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
-        output_file = os.path.join(get_download_dir(), fn)
-        logger.info("saving to file {}".format(fn))
-
-        # download if the file is not present (preventing unnecessary downloads)
-        start_time = time()
-        if not os.path.exists(output_file):
-            with open(output_file, "wb") as file:
-                response = requests.get(doc.target["url"])
-                file.write(response.content)
-                file.close()
-        download_time = time() - start_time
-        return DownloadResult(
-            fn,  # NOTE or output_file? hmmm
-            download_time,  # TODO add mime_type and content_length
-        )
-
-    def fetch_downloaded_content(self, doc: Document) -> Optional[DownloadResult]:
-        logger.info("checking download worker output")
-        possibles = self.handler.searchResult(doc._id, self.DANE_DOWNLOAD_TASK_KEY)
-        logger.info(possibles)
-        # NOTE now MUST use the latest dane-beng-download-worker or dane-download-worker
-        if len(possibles) > 0 and "file_path" in possibles[0].payload:
-            return DownloadResult(
-                possibles[0].payload.get("file_path"),
-                possibles[0].payload.get("download_time", -1),
-                possibles[0].payload.get("mime_type", "unknown"),
-                possibles[0].payload.get("content_length", -1),
-            )
-        logger.error("No file_path found in download result")
-        return None
 
 
 # Start the worker
