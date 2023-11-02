@@ -51,6 +51,8 @@ def process_configured_input_file():
             cfg.OUTPUT.DELETE_ON_COMPLETION,
             cfg.OUTPUT.TRANSFER_ON_COMPLETION,
         )
+        logger.info("Results after applying desired I/O")
+        logger.info(validated_output)
     else:
         logger.info(f"Error: {proc_result.state}: {proc_result.message}")
 
