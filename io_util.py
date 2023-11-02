@@ -14,6 +14,7 @@ from models import OutputType, DownloadResult, Provenance
 
 logger = logging.getLogger(__name__)
 DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
+OUTPUT_FILE_BASE_NAME = "visxp_prep"
 S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.KEYFRAMES,
     OutputType.SPECTOGRAMS,
@@ -35,6 +36,21 @@ def get_base_output_dir(source_id: str = "") -> str:
     if source_id:
         path_elements.append(source_id)
     return os.path.join(*path_elements)
+
+
+# output file name of the final tar.gz that will be uploaded to S3
+def get_output_file_name(source_id: str) -> str:
+    return f"{OUTPUT_FILE_BASE_NAME}__{source_id}.tar.gz"
+
+
+# e.g. s3://<bucket>/assets/<source_id>
+def get_s3_base_uri(source_id: str) -> str:
+    return f"s3://{os.path.join(cfg.OUTPUT.S3_BUCKET, cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id)}"
+
+
+# e.g. s3://<bucket>/assets/<source_id>/visxp_prep__<source_id>.tar.gz
+def get_s3_output_file_uri(source_id: str) -> str:
+    return f"{get_s3_base_uri(source_id)}/{get_output_file_name(source_id)}"
 
 
 # for each OutputType a subdir is created inside the base output dir
@@ -103,7 +119,7 @@ def transfer_output(source_id: str) -> bool:
 
     s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
     file_list = [os.path.join(output_dir, ot.value) for ot in S3_OUTPUT_TYPES]
-    tar_file = os.path.join(output_dir, "visxp_prep.tar.gz")
+    tar_file = os.path.join(output_dir, get_output_file_name(source_id))
 
     success = s3.transfer_to_s3(
         cfg.OUTPUT.S3_BUCKET,
@@ -117,10 +133,6 @@ def transfer_output(source_id: str) -> bool:
         logger.error(f"Failed to upload: {tar_file}")
         return False
     return True
-
-
-def get_s3_base_url(source_id: str) -> str:
-    return f"s3://{os.path.join(cfg.OUTPUT.S3_BUCKET, cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id)}"
 
 
 def obtain_files_to_upload_to_s3(output_dir: str) -> List[str]:

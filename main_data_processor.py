@@ -141,7 +141,7 @@ def apply_desired_io_on_output(
     if not delete_input_file(input_file, delete_input_on_completion):
         return {
             "state": 500,
-            "message": "Generated a transcript, but could not delete the input file",
+            "message": "Generated VISXP_PREP output, but could not delete the input file",
         }
 
     return {

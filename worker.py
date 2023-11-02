@@ -12,7 +12,7 @@ from models import CallbackResponse, Provenance
 from io_util import (
     get_base_output_dir,
     get_source_id,
-    get_s3_base_url,
+    get_s3_output_file_uri,
     obtain_input_file,
     get_download_dir,
 )
@@ -170,7 +170,7 @@ class VideoSegmentationWorker(base_worker):
             self.save_to_dane_index(
                 doc,
                 task,
-                get_s3_base_url(get_source_id(input_file_path)),
+                get_s3_output_file_uri(get_source_id(input_file_path)),
                 provenance=provenance,
             )
         return validated_output
