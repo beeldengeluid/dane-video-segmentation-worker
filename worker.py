@@ -35,6 +35,26 @@ Instead we put the output in:
 logger = logging.getLogger()
 
 
+# triggered by running: python worker.py --run-test-file
+def process_configured_input_file():
+    logger.info("Triggered processing of configured VISXP_PREP.TEST_INPUT_PATH")
+    proc_result = generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
+    if proc_result.provenance:
+        logger.info(
+            f"Successfully processed example file in {proc_result.provenance.processing_time_ms}ms"
+        )
+        logger.info("Result ok, now applying the desired IO on the results")
+        validated_output: CallbackResponse = apply_desired_io_on_output(
+            cfg.VISXP_PREP.TEST_INPUT_FILE,
+            proc_result,
+            cfg.INPUT.DELETE_ON_COMPLETION,
+            cfg.OUTPUT.DELETE_ON_COMPLETION,
+            cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+        )
+    else:
+        logger.info(f"Error: {proc_result.state}: {proc_result.message}")
+
+
 class VideoSegmentationWorker(base_worker):
     def __init__(self, config):
         logger.info(config)
@@ -229,23 +249,7 @@ if __name__ == "__main__":
     if args.run_test_file != "n":
         logger.info("Running main_data_processor with VISXP_PREP.TEST_INPUT_FILE ")
         if cfg.VISXP_PREP and cfg.VISXP_PREP.TEST_INPUT_FILE:
-            proc_result = generate_input_for_feature_extraction(
-                cfg.VISXP_PREP.TEST_INPUT_FILE
-            )
-            if proc_result.provenance:
-                logger.info(
-                    f"Successfully processed example file in {proc_result.provenance.processing_time_ms}ms"
-                )
-                logger.info("Result ok, now applying the desired IO on the results")
-                validated_output: CallbackResponse = apply_desired_io_on_output(
-                    cfg.VISXP_PREP.TEST_INPUT_FILE,
-                    proc_result,
-                    cfg.INPUT.DELETE_ON_COMPLETION,
-                    cfg.OUTPUT.DELETE_ON_COMPLETION,
-                    cfg.OUTPUT.TRANSFER_ON_COMPLETION,
-                )
-            else:
-                logger.info(f"Error: {proc_result.state}: {proc_result.message}")
+            process_configured_input_file()
         else:
             logger.error("Please configure an input file in VISXP_PREP.TEST_INPUT_FILE")
             sys.exit()
