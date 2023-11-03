@@ -35,14 +35,14 @@ VISXP_PREP:
     SPECTOGRAM_WINDOW_SIZE_MS: 1000
     SPECTOGRAM_SAMPLERATE_HZ:
         - 24000
-    TEST_INPUT_FILE: /data/testob.mp4
+    TEST_INPUT_FILE: /data/testob-take-2.mp4
 INPUT:
-    DELETE_ON_COMPLETION: True
+    DELETE_ON_COMPLETION: False  # NOTE: set to True in production environment
 OUTPUT:
     DELETE_ON_COMPLETION: True
     TRANSFER_ON_COMPLETION: True
-    S3_ENDPOINT_URL: http://localhost:9000
-    S3_BUCKET: test-bucket  # bucket reserved for 1 type of output
+    S3_ENDPOINT_URL: https://s3.eu-west-1.amazonaws.com/
+    S3_BUCKET: beng-daan-visxp  # bucket reserved for 1 type of output
     S3_FOLDER_IN_BUCKET: assets  # folder within the bucket
 DANE_DEPENDENCIES:
     - DOWNLOAD

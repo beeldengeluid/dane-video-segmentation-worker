@@ -109,6 +109,7 @@ def _validate_transfer_config() -> bool:
         return False
     return True
 
+
 # compresses all desired output dirs into a single tar and uploads it to S3
 def transfer_output(source_id: str) -> bool:
     output_dir = get_base_output_dir(source_id)
