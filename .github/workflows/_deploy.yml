@@ -18,5 +18,5 @@ jobs:
     if: ${{ inputs.target == 'ghcr' }}
     uses: ./.github/workflows/_build-push-cached-ghcr.yml
     permissions:
-      id-token: write
       contents: read
+      packages: write
