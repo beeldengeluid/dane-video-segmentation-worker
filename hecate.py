@@ -26,7 +26,7 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
             f"and {len(shot_indices)} shots."
         )
     except Exception:
-        logger.info("Could not obtain shots and keyframes. Exit.")
+        logger.info("Could not obtain shots and keyframes, quitting")
         sys.exit()
 
     fps = get_fps(input_file_path)
