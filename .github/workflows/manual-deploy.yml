@@ -6,9 +6,9 @@ on:
       target:
         type: choice
         required: true
-        default: ecr
+        default: ghcr
         options:
-        - ecr
+        - ghcr
 
 jobs:
   deploy:

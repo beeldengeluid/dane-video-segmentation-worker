@@ -18,4 +18,4 @@ jobs:
     secrets: inherit
     needs: [test]
     with:
-      target: ecr
+      target: ghcr

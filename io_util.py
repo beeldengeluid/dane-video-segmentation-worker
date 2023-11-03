@@ -109,8 +109,7 @@ def _validate_transfer_config() -> bool:
         return False
     return True
 
-
-# TODO adapt, so it simply tars all S3_OUTPUT_TYPES and uploads this single file
+# compresses all desired output dirs into a single tar and uploads it to S3
 def transfer_output(source_id: str) -> bool:
     output_dir = get_base_output_dir(source_id)
     logger.info(f"Transferring {output_dir} to S3 (asset={source_id})")

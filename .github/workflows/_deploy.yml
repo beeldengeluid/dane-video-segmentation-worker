@@ -14,3 +14,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+  deploy-ghrc:
+    if: ${{ inputs.target == 'ghcr' }}
+    uses: ./.github/workflows/_build-push-cached-ghcr.yml
+    permissions:
+      id-token: write
+      contents: read
