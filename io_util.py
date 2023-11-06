@@ -189,16 +189,17 @@ def obtain_input_file(
             "The file was not downloaded by the DANE worker, downloading it myself..."
         )
         download_result = _download_content(doc)
-        if download_result:
-            download_provenance = Provenance(
-                activity_name="download",
-                activity_description="Download source media",
-                start_time_unix=-1,
-                processing_time_ms=download_result.download_time * 1000,
-                input_data={},
-                output_data={"file_path": download_result.file_path},
-            )
-            return download_result, download_provenance
+    if download_result:
+        download_provenance = Provenance(
+            activity_name="download",
+            activity_description="Download source media",
+            start_time_unix=-1,  # TODO not supllied yet by download worker
+            processing_time_ms=-1,  # TODO not supllied yet by download worker
+            input_data={},
+            output_data={"file_path": download_result.file_path},
+        )
+        return download_result, download_provenance
+    logger.error("Could not download the content in any way")
     return None, None
 
 
