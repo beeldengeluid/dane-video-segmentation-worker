@@ -4,7 +4,9 @@ FROM debian:buster-slim
 RUN apt-get clean && apt-get update -y && apt-get upgrade -y
 
 # install dependencies - added libssl-dev for installing Python from source later and libgl1-mesa-glx for OpenCV under Python3.10
-RUN apt-get install -y git wget vim build-essential cmake pkg-config libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran ffmpeg libssl-dev libgl1-mesa-glx sqlite3 libsqlite3-dev
+RUN apt-get install -y git wget vim build-essential cmake pkg-config libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran ffmpeg libssl-dev libgl1-mesa-glx sqlite3 libsqlite3-dev && \
+    apt-get autoremove --purge && \
+    apt-get clean
 
 # install opencv_contrib
 RUN git clone https://github.com/opencv/opencv_contrib.git && \
@@ -29,9 +31,12 @@ RUN cd /opencv/build && \
     -D ENABLE_FAST_MATH=1 \
     -D WITH_LAPACK=OFF .. && \
     make -j2 && \
-    make install && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib>>~/.bashrc
+    make install && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib>>~/.bashrc && \
+    rm -rf /opencv/build
 
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
+
+WORKDIR /
 
 # install hecate
 RUN git clone https://github.com/yahoo/hecate.git && \

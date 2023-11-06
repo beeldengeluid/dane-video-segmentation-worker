@@ -97,6 +97,13 @@ class VideoSegmentationWorker(base_worker):
         self.__queue_name = "VISXP_PREP"  # this is the queue that receives the work and NOT the reply queue
         self.__binding_key = "#.VISXP_PREP"  # ['Video.VISXP_PREP', 'Sound.VISXP_PREP']
         self.__depends_on = self.DANE_DEPENDENCIES  # TODO make this part of DANE lib?
+        # NOTE: cannot be automaticcally filled, because no git client is present
+        self.generator = {
+            "id": "dane-video-segmentation-worker",
+            "type": "Software",
+            "name": "VISXP_PREP",
+            "homepage": "https://github.com/beeldengeluid/dane-video-segmentation-worker",
+        }
 
         if not self.UNIT_TESTING:
             logger.warning("Need to initialize the VISXP_PREP service")
