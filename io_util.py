@@ -177,49 +177,6 @@ def get_download_dir():
     return os.path.join(cfg.FILE_SYSTEM.BASE_MOUNT, cfg.FILE_SYSTEM.INPUT_DIR)
 
 
-"""
-def obtain_input_file(s3_uri: str) -> VisXPFeatureExtractionInput:
-
-    if not validate_s3_uri(s3_uri):
-        return VisXPFeatureExtractionInput(500, f"Invalid S3 URI: {s3_uri}")
-
-    source_id = source_id_from_s3_uri(s3_uri)
-    start_time = time()
-    output_folder = get_base_input_dir(source_id)
-
-    # TODO download the content into get_download_dir()
-    s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
-    bucket, object_name = parse_s3_uri(s3_uri)
-    logger.info(f"OBJECT NAME: {object_name}")
-    input_file_path = os.path.join(
-        get_download_dir(),
-        source_id,
-        os.path.basename(object_name),  # i.e. visxp_prep__<source_id>.tar.gz
-    )
-    success = s3.download_file(bucket, object_name, output_folder)
-    if success:
-        # TODO uncompress the visxp_prep.tar.gz
-
-        provenance = Provenance(
-            activity_name="download",
-            activity_description="Download VISXP_PREP data",
-            start_time_unix=start_time,
-            processing_time_ms=time() - start_time,
-            input_data={},
-            output_data={"file_path": input_file_path},
-        )
-        return VisXPFeatureExtractionInput(
-            200,
-            f"Failed to download: {s3_uri}",
-            source_id_from_s3_uri(s3_uri),  # source_id
-            input_file_path,  # locally downloaded .tar.gz
-            provenance,
-        )
-    logger.error("Failed to download VISXP_PREP data from S3")
-    return VisXPFeatureExtractionInput(500, f"Failed to download: {s3_uri}")
-"""
-
-
 def obtain_input_file(
     handler, doc: Document
 ) -> Tuple[Optional[DownloadResult], Optional[Provenance]]:
@@ -252,10 +209,15 @@ def _download_dane_target_url(doc: Document) -> Optional[DownloadResult]:
     if not doc.target or "url" not in doc.target or not doc.target["url"]:
         logger.info("No url found in DANE doc")
         return None
-    if validate_s3_uri(doc.target["url"]):
-        logger.info("doc.target seems to be an s3 uri")
-        return s3_download(doc.target["url"])
-    return http_download(doc.target["url"])
+    return download_uri(doc.target["url"])
+
+
+def download_uri(uri: str) -> Optional[DownloadResult]:
+    logger.info(f"Trying to download {uri}")
+    if validate_s3_uri(uri):
+        logger.info("URI seems to be an s3 uri")
+        return s3_download(uri)
+    return http_download(uri)
 
 
 def _fetch_dane_download_result(handler, doc: Document) -> Optional[DownloadResult]:

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import sys
 from time import time
+import validators
 
 from base_util import validate_config
 from dane import Document, Task, Result
@@ -16,7 +17,7 @@ from io_util import (
     get_s3_output_file_uri,
     obtain_input_file,
     get_download_dir,
-    s3_download,
+    download_uri,
 )
 from pika.exceptions import ChannelClosedByBroker
 from main_data_processor import (
@@ -41,8 +42,8 @@ logger = logging.getLogger()
 def process_configured_input_file():
     logger.info("Triggered processing of configured VISXP_PREP.TEST_INPUT_PATH")
     input_file_path = cfg.VISXP_PREP.TEST_INPUT_FILE
-    if validate_s3_uri(input_file_path):
-        download_result = s3_download(input_file_path)
+    if validate_s3_uri(input_file_path) or validators.url(input_file_path):
+        download_result = download_uri(input_file_path)
         input_file_path = download_result.file_path if download_result else None
 
     if not input_file_path:
