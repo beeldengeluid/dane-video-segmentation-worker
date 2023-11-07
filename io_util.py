@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from dane import Document
 from dane.config import cfg
-from dane.s3_util import S3Store
+from dane.s3_util import S3Store, parse_s3_uri, validate_s3_uri
 from models import OutputType, DownloadResult, Provenance
 
 
@@ -177,18 +177,62 @@ def get_download_dir():
     return os.path.join(cfg.FILE_SYSTEM.BASE_MOUNT, cfg.FILE_SYSTEM.INPUT_DIR)
 
 
+"""
+def obtain_input_file(s3_uri: str) -> VisXPFeatureExtractionInput:
+
+    if not validate_s3_uri(s3_uri):
+        return VisXPFeatureExtractionInput(500, f"Invalid S3 URI: {s3_uri}")
+
+    source_id = source_id_from_s3_uri(s3_uri)
+    start_time = time()
+    output_folder = get_base_input_dir(source_id)
+
+    # TODO download the content into get_download_dir()
+    s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
+    bucket, object_name = parse_s3_uri(s3_uri)
+    logger.info(f"OBJECT NAME: {object_name}")
+    input_file_path = os.path.join(
+        get_download_dir(),
+        source_id,
+        os.path.basename(object_name),  # i.e. visxp_prep__<source_id>.tar.gz
+    )
+    success = s3.download_file(bucket, object_name, output_folder)
+    if success:
+        # TODO uncompress the visxp_prep.tar.gz
+
+        provenance = Provenance(
+            activity_name="download",
+            activity_description="Download VISXP_PREP data",
+            start_time_unix=start_time,
+            processing_time_ms=time() - start_time,
+            input_data={},
+            output_data={"file_path": input_file_path},
+        )
+        return VisXPFeatureExtractionInput(
+            200,
+            f"Failed to download: {s3_uri}",
+            source_id_from_s3_uri(s3_uri),  # source_id
+            input_file_path,  # locally downloaded .tar.gz
+            provenance,
+        )
+    logger.error("Failed to download VISXP_PREP data from S3")
+    return VisXPFeatureExtractionInput(500, f"Failed to download: {s3_uri}")
+"""
+
+
 def obtain_input_file(
     handler, doc: Document
 ) -> Tuple[Optional[DownloadResult], Optional[Provenance]]:
     # step 1: try to fetch the content via the configured DANE download worker
-    download_result = _fetch_downloaded_content(handler, doc)
+    download_result = _fetch_dane_download_result(handler, doc)
 
     # step 2: try to download the file if no DANE download worker was configured
     if download_result is None:
         logger.info(
             "The file was not downloaded by the DANE worker, downloading it myself..."
         )
-        download_result = _download_content(doc)
+        download_result = _download_dane_target_url(doc)
+
     if download_result:
         download_provenance = Provenance(
             activity_name="download",
@@ -204,33 +248,17 @@ def obtain_input_file(
 
 
 # https://www.openbeelden.nl/files/29/29494.29451.WEEKNUMMER243-HRE00015742.mp4
-def _download_content(doc: Document) -> Optional[DownloadResult]:
+def _download_dane_target_url(doc: Document) -> Optional[DownloadResult]:
     if not doc.target or "url" not in doc.target or not doc.target["url"]:
         logger.info("No url found in DANE doc")
         return None
-
-    logger.info("downloading {}".format(doc.target["url"]))
-    fn = os.path.basename(urlparse(doc.target["url"]).path)
-    # fn = unquote(fn)
-    # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
-    output_file = os.path.join(get_download_dir(), fn)
-    logger.info("saving to file {}".format(fn))
-
-    # download if the file is not present (preventing unnecessary downloads)
-    start_time = time()
-    if not os.path.exists(output_file):
-        with open(output_file, "wb") as file:
-            response = requests.get(doc.target["url"])
-            file.write(response.content)
-            file.close()
-    download_time = time() - start_time
-    return DownloadResult(
-        fn,  # NOTE or output_file? hmmm
-        download_time,  # TODO add mime_type and content_length
-    )
+    if validate_s3_uri(doc.target["url"]):
+        logger.info("doc.target seems to be an s3 uri")
+        return s3_download(doc.target["url"])
+    return http_download(doc.target["url"])
 
 
-def _fetch_downloaded_content(handler, doc: Document) -> Optional[DownloadResult]:
+def _fetch_dane_download_result(handler, doc: Document) -> Optional[DownloadResult]:
     logger.info("checking download worker output")
     possibles = handler.searchResult(doc._id, DANE_DOWNLOAD_TASK_KEY)
     logger.info(possibles)
@@ -243,4 +271,58 @@ def _fetch_downloaded_content(handler, doc: Document) -> Optional[DownloadResult
             possibles[0].payload.get("content_length", -1),
         )
     logger.error("No file_path found in download result")
+    return None
+
+
+# TODO test this!
+def http_download(url: str) -> Optional[DownloadResult]:
+    logger.info(f"Downloading {url}")
+    fn = os.path.basename(urlparse(url).path)
+    # fn = unquote(fn)
+    # fn = doc.target['url'][doc.target['url'].rfind('/') +1:]
+    output_file = os.path.join(get_download_dir(), fn)
+    logger.info(f"Saving to file {fn}")
+
+    # download if the file is not present (preventing unnecessary downloads)
+    start_time = time()
+    if not os.path.exists(output_file):
+        with open(output_file, "wb") as file:
+            response = requests.get(url)
+            file.write(response.content)
+            file.close()
+    download_time = time() - start_time
+    return DownloadResult(
+        fn,  # NOTE or output_file? hmmm
+        download_time,  # TODO add mime_type and content_length
+    )
+
+
+# e.g. s3://dane-asset-staging-gb/assets/2101608170158176431__NOS_JOURNAAL_-WON01513227.mp4
+def s3_download(s3_uri: str) -> Optional[DownloadResult]:
+    logger.info(f"Downloading {s3_uri}")
+    if not validate_s3_uri(s3_uri):
+        logger.error(f"Invalid S3 URI: {s3_uri}")
+        return None
+
+    # source_id = get_source_id(s3_uri)
+    start_time = time()
+    output_folder = get_download_dir()
+
+    # TODO download the content into get_download_dir()
+    s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
+    bucket, object_name = parse_s3_uri(s3_uri)
+    logger.info(f"OBJECT NAME: {object_name}")
+    input_file_path = os.path.join(
+        get_download_dir(),
+        # source_id,
+        os.path.basename(object_name),  # i.e. visxp_prep__<source_id>.tar.gz
+    )
+    success = s3.download_file(bucket, object_name, output_folder)
+    if success:
+        download_time = time() - start_time
+        return DownloadResult(
+            input_file_path,
+            download_time,
+        )
+    logger.error("Failed to download input data from S3")
     return None
