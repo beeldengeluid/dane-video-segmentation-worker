@@ -3,11 +3,13 @@ import os
 from pathlib import Path
 import sys
 from time import time
+import validators
 
 from base_util import validate_config
 from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
+from dane.s3_util import validate_s3_uri
 from models import CallbackResponse, Provenance
 from io_util import (
     get_base_output_dir,
@@ -15,6 +17,7 @@ from io_util import (
     get_s3_output_file_uri,
     obtain_input_file,
     get_download_dir,
+    download_uri,
 )
 from pika.exceptions import ChannelClosedByBroker
 from main_data_processor import (
@@ -38,14 +41,24 @@ logger = logging.getLogger()
 # triggered by running: python worker.py --run-test-file
 def process_configured_input_file():
     logger.info("Triggered processing of configured VISXP_PREP.TEST_INPUT_PATH")
-    proc_result = generate_input_for_feature_extraction(cfg.VISXP_PREP.TEST_INPUT_FILE)
+    input_file_path = cfg.VISXP_PREP.TEST_INPUT_FILE
+    if validate_s3_uri(input_file_path) or validators.url(input_file_path):
+        logger.info("Input is a URI, contuining to download")
+        download_result = download_uri(input_file_path)
+        input_file_path = download_result.file_path if download_result else None
+
+    if not input_file_path:
+        logger.error("input file empty")
+        sys.exit()
+
+    proc_result = generate_input_for_feature_extraction(input_file_path)
     if proc_result.provenance:
         logger.info(
             f"Successfully processed example file in {proc_result.provenance.processing_time_ms}ms"
         )
         logger.info("Result ok, now applying the desired IO on the results")
         validated_output: CallbackResponse = apply_desired_io_on_output(
-            cfg.VISXP_PREP.TEST_INPUT_FILE,
+            input_file_path,
             proc_result,
             cfg.INPUT.DELETE_ON_COMPLETION,
             cfg.OUTPUT.DELETE_ON_COMPLETION,
