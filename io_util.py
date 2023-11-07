@@ -254,7 +254,7 @@ def http_download(url: str) -> Optional[DownloadResult]:
             file.close()
     download_time = time() - start_time
     return DownloadResult(
-        fn,  # NOTE or output_file? hmmm
+        output_file,  # NOTE or output_file? hmmm
         download_time,  # TODO add mime_type and content_length
     )
 

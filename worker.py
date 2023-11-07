@@ -43,6 +43,7 @@ def process_configured_input_file():
     logger.info("Triggered processing of configured VISXP_PREP.TEST_INPUT_PATH")
     input_file_path = cfg.VISXP_PREP.TEST_INPUT_FILE
     if validate_s3_uri(input_file_path) or validators.url(input_file_path):
+        logger.info("Input is a URI, contuining to download")
         download_result = download_uri(input_file_path)
         input_file_path = download_result.file_path if download_result else None
 
