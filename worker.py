@@ -1,18 +1,24 @@
+from functools import reduce
 import logging
 import os
 from pathlib import Path
 import sys
-from time import time
 import validators
-
 from base_util import validate_config
 from dane import Document, Task, Result
 from dane.base_classes import base_worker
 from dane.config import cfg
+from dane.provenance import (
+    Provenance,
+    generate_initial_provenance,
+    obtain_software_versions,
+    stop_timer_and_persist_provenance_chain,
+)
 from dane.s3_util import validate_s3_uri
-from models import CallbackResponse, Provenance
+from models import CallbackResponse
 from io_util import (
     get_base_output_dir,
+    get_provenance_file,
     get_source_id,
     get_s3_output_file_uri,
     obtain_input_file,
@@ -36,10 +42,23 @@ Instead we put the output in:
 - /mnt/dane-fs/output-files/visxp_prep/{source_id}
 """
 logger = logging.getLogger()
+DANE_WORKER_ID = "dane-video-segmentation-worker"
 
 
 # triggered by running: python worker.py --run-test-file
 def process_configured_input_file():
+    top_level_provenance = generate_initial_provenance(
+        name="Generate input data for VisXP feature extraction",
+        description=(
+            "Detect shots and keyframes, "
+            "extract keyframes and corresponding audio spectograms"
+        ),
+        input_data={"input_file_path": "TODO S3 URI"},  # TODO S3 URI!
+        parameters=cfg.VISXP_PREP,
+        software_version=obtain_software_versions(DANE_WORKER_ID),
+    )
+    provenance_chain = []
+
     logger.info("Triggered processing of configured VISXP_PREP.TEST_INPUT_PATH")
     input_file_path = cfg.VISXP_PREP.TEST_INPUT_FILE
     if validate_s3_uri(input_file_path) or validators.url(input_file_path):
@@ -52,22 +71,32 @@ def process_configured_input_file():
         sys.exit()
 
     proc_result = generate_input_for_feature_extraction(input_file_path)
-    if proc_result.provenance:
-        logger.info(
-            f"Successfully processed example file in {proc_result.provenance.processing_time_ms}ms"
-        )
-        logger.info("Result ok, now applying the desired IO on the results")
-        validated_output: CallbackResponse = apply_desired_io_on_output(
-            input_file_path,
-            proc_result,
-            cfg.INPUT.DELETE_ON_COMPLETION,
-            cfg.OUTPUT.DELETE_ON_COMPLETION,
-            cfg.OUTPUT.TRANSFER_ON_COMPLETION,
-        )
-        logger.info("Results after applying desired I/O")
-        logger.info(validated_output)
-    else:
-        logger.info(f"Error: {proc_result.state}: {proc_result.message}")
+
+    if proc_result.provenance_chain:
+        provenance_chain.extend(proc_result.provenance_chain)
+
+    # as a last piece of output, generate the provenance.json before packaging and uploading
+    full_provenance_chain = stop_timer_and_persist_provenance_chain(
+        provenance=top_level_provenance,
+        output_data=reduce(
+            lambda a, b: {**a, **b},
+            [p.output_data for p in provenance_chain],
+        ),
+        provenance_chain=provenance_chain,
+        provenance_file_path=get_provenance_file(input_file_path),
+    )
+
+    validated_output: CallbackResponse = apply_desired_io_on_output(
+        input_file_path,
+        proc_result,
+        cfg.INPUT.DELETE_ON_COMPLETION,
+        cfg.OUTPUT.DELETE_ON_COMPLETION,
+        cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+    )
+    logger.info("Results after applying desired I/O")
+    logger.info(validated_output)
+    logger.info("Full provenance chain")
+    logger.info(full_provenance_chain.to_json())
 
 
 class VideoSegmentationWorker(base_worker):
@@ -171,15 +200,17 @@ class VideoSegmentationWorker(base_worker):
         logger.info(doc)
 
         # step 0: Create provenance object
-        provenance = Provenance(
-            activity_name="dane-video-segmenation-worker",
-            activity_description="Apply VisXP prep to input media",
-            start_time_unix=time(),
-            processing_time_ms=-1,
-            input_data={},
-            output_data={},
-            steps=[],
+        top_level_provenance = generate_initial_provenance(
+            name="Generate input data for VisXP feature extraction",
+            description=(
+                "Detect shots and keyframes, "
+                "extract keyframes and corresponding audio spectograms"
+            ),
+            input_data={"input_file_path": "TODO S3 URI"},  # TODO S3 URI!
+            parameters=cfg.VISXP_PREP,
+            software_version=obtain_software_versions(DANE_WORKER_ID),
         )
+        provenance_chain = []
 
         # obtain the input file
         download_result, download_provenance = obtain_input_file(self.handler, doc)
@@ -188,16 +219,27 @@ class VideoSegmentationWorker(base_worker):
                 "state": 500,
                 "message": "Could not download the document content",
             }
-        if download_provenance and provenance.steps:
-            provenance.steps.append(download_provenance)
+        if download_provenance:
+            provenance_chain.append(download_provenance)
 
         input_file_path = download_result.file_path
 
         # step 3: submit the input file to hecate/etc
         proc_result = generate_input_for_feature_extraction(input_file_path)
 
-        if proc_result.provenance and provenance.steps:
-            provenance.steps.append(proc_result.provenance)
+        if proc_result.provenance_chain:
+            provenance_chain.extend(proc_result.provenance_chain)
+
+        # as a last piece of output, generate the provenance.json before packaging and uploading
+        full_provenance_chain = stop_timer_and_persist_provenance_chain(
+            provenance=top_level_provenance,
+            output_data=reduce(
+                lambda a, b: {**a, **b},
+                [p.output_data for p in provenance_chain],
+            ),
+            provenance_chain=provenance_chain,
+            provenance_file_path=get_provenance_file(input_file_path),
+        )
 
         validated_output: CallbackResponse = apply_desired_io_on_output(
             input_file_path,
@@ -216,7 +258,7 @@ class VideoSegmentationWorker(base_worker):
                 doc,
                 task,
                 get_s3_output_file_uri(get_source_id(input_file_path)),
-                provenance=provenance,
+                provenance=full_provenance_chain,
             )
         return validated_output
 

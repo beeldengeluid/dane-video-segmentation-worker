@@ -3,9 +3,9 @@ import os
 import sys
 import base_util
 from dane.config import cfg
+from dane.provenance import Provenance, obtain_software_versions
 from keyframe_extraction import get_fps, get_framecount, frame_index_to_timecode
-from models import Provenance, HecateOutput
-from provenance import obtain_software_versions
+from models import HecateOutput
 from time import time
 
 

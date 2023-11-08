@@ -1,6 +1,7 @@
-from dataclasses import dataclass, field
+from dane.provenance import Provenance
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, TypedDict, Dict
+from typing import List, Optional, TypedDict
 
 
 # These are the types of output this worker (possibly) provides (depending on configuration)
@@ -25,33 +26,6 @@ class CallbackResponse(TypedDict):
     message: str
 
 
-# NOTE https://stackoverflow.com/questions/20670732/is-input-a-keyword-in-python
-@dataclass
-class Provenance:
-    activity_name: str
-    activity_description: str
-    start_time_unix: float
-    processing_time_ms: float
-    input_data: dict[str, str]
-    output_data: dict[str, str]
-    parameters: Optional[dict] = None
-    software_version: Optional[Dict[str, str]] = None
-    steps: Optional[list["Provenance"]] = field(default_factory=list["Provenance"])
-
-    def to_json(self):
-        return {
-            "activity_name": self.activity_name,
-            "activity_description": self.activity_description,
-            "processing_time_ms": self.processing_time_ms,
-            "start_time_unix": self.start_time_unix,
-            "parameters": self.parameters,  # .to_json
-            "software_version": self.software_version,  # .to_json
-            "input_data": self.input_data,  # .to_json
-            "output_data": self.output_data,  # .to_json
-            "steps": [step.to_json() for step in self.steps],
-        }
-
-
 # NOTE copied from dane-beng-download-worker (move this to DANE later)
 @dataclass
 class DownloadResult:
@@ -65,26 +39,4 @@ class DownloadResult:
 class VisXPFeatureExtractionInput:
     state: int
     message: str
-    provenance: Optional[Provenance]
-
-
-""" NOTE the output should contain the following dir structure + files
-./testob/spectograms/22960_48000.npz
-./testob/spectograms/19680_48000.npz
-./testob/spectograms/9520_24000.npz
-./testob/spectograms/85680_48000.npz
-./testob/spectograms/18520_24000.npz
-
-./testob/keyframes/101880.jpg
-./testob/keyframes/40320.jpg
-./testob/keyframes/85680.jpg
-
-./testob/metadata/keyframes_timestamps_ms.txt
-./testob/metadata/keyframes_indices.txt
-./testob/metadata/shot_boundaries_timestamps_ms.txt
-
-./testob/provenance.json --> change to ./testob/provenance/overal_provenance.json (possibly per processing unit a file as well)
-
-./testob/tmp/output_24000.wav
-./testob/tmp/output_48000.wav
-"""
+    provenance_chain: Optional[List[Provenance]]

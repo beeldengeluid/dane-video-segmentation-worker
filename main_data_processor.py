@@ -1,5 +1,4 @@
 import logging
-from time import time
 
 from dane.config import cfg
 import hecate
@@ -18,7 +17,6 @@ from io_util import (
     delete_input_file,
     transfer_output,
 )
-from provenance import generate_full_provenance_chain
 import spectogram
 
 
@@ -29,7 +27,6 @@ logger = logging.getLogger(__name__)
 def generate_input_for_feature_extraction(
     input_file_path: str,
 ) -> VisXPFeatureExtractionInput:
-    start_time = time()
     logger.info(f"Processing input: {input_file_path}")
 
     # Step 0: this is the "processing ID" if you will
@@ -78,19 +75,14 @@ def generate_input_for_feature_extraction(
             output_dirs[OutputType.TMP.value],
         )
 
-    # finally generate the provenance chain before returning the generated results
-    provenance = generate_full_provenance_chain(
-        start_time,
-        input_file_path,
+    return VisXPFeatureExtractionInput(
+        200,
+        "Succesfully generated input for VisXP feature extraction",
         [
             p
             for p in [hecate_provenance, keyframe_provenance, spectogram_provenance]
             if p is not None
         ],
-    )
-
-    return VisXPFeatureExtractionInput(
-        200, "Succesfully generated input for VisXP feature extraction", provenance
     )
 
 

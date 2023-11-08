@@ -8,8 +8,9 @@ from urllib.parse import urlparse
 
 from dane import Document
 from dane.config import cfg
+from dane.provenance import PROVENANCE_FILE, Provenance
 from dane.s3_util import S3Store, parse_s3_uri, validate_s3_uri
-from models import OutputType, DownloadResult, Provenance
+from models import OutputType, DownloadResult
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,18 @@ S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.PROVENANCE,
     OutputType.METADATA,
 ]  # only upload this output to S3
+
+
+def get_download_dir():
+    return os.path.join(cfg.FILE_SYSTEM.BASE_MOUNT, cfg.FILE_SYSTEM.INPUT_DIR)
+
+
+def get_provenance_file(input_file_path: str) -> str:
+    return os.path.join(
+        get_base_output_dir(get_source_id(input_file_path)),
+        OutputType.PROVENANCE.value,
+        PROVENANCE_FILE,
+    )
 
 
 # returns the basename of the input file path without an extension
@@ -171,10 +184,6 @@ def delete_input_file(input_file: str, actually_delete: bool) -> bool:
         logger.exception("FileNotFoundError while removing empty input file dirs")
 
     return True  # return True even if empty dirs were not removed
-
-
-def get_download_dir():
-    return os.path.join(cfg.FILE_SYSTEM.BASE_MOUNT, cfg.FILE_SYSTEM.INPUT_DIR)
 
 
 def obtain_input_file(

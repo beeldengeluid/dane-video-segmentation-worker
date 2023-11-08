@@ -6,7 +6,8 @@ import os
 from time import time
 from typing import List
 from dane.config import cfg
-from models import Provenance
+from dane.provenance import Provenance
+
 
 logger = logging.getLogger(__name__)
 

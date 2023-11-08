@@ -3,7 +3,8 @@ import os
 import logging
 from time import time
 from typing import List
-from models import Provenance
+
+from dane.provenance import Provenance
 
 
 logger = logging.getLogger(__name__)

@@ -33,15 +33,17 @@ VISXP_PREP:
     RUN_KEYFRAME_EXTRACTION: true
     RUN_AUDIO_EXTRACTION: true
     SPECTOGRAM_WINDOW_SIZE_MS: 1000
-    SPECTOGRAM_SAMPLERATE_HZ:
+    SPECTOGRAM_SAMPLERATE_HZ:  # this cause x amount of files and will cause a mismatch with the keyframes
         - 24000
+    # TEST_INPUT_FILE: s3://dane-asset-staging-gb/assets/2101608170158176431__NOS_JOURNAAL_-WON01513227.mp4
+    # TEST_INPUT_FILE: s3://dane-asset-staging-gb/assets/2101608170158178231__NIEUWSUUR____-WON01513246.mp4
     TEST_INPUT_FILE: https://openbeelden.nl/files/13/66/1411058.1366653.WEEKNUMMER404-HRE000042FF_924200_1089200.mp4
     # TEST_INPUT_FILE: s3://your-bucket/assets/your-test-video.mp4
     # TEST_INPUT_FILE: /data/your-test-video.mp4
 INPUT:
     DELETE_ON_COMPLETION: False  # NOTE: set to True in production environment
 OUTPUT:
-    DELETE_ON_COMPLETION: True
+    DELETE_ON_COMPLETION: False
     TRANSFER_ON_COMPLETION: True
     S3_ENDPOINT_URL: https://s3.eu-west-1.amazonaws.com/
     S3_BUCKET: beng-daan-visxp  # bucket reserved for 1 type of output
