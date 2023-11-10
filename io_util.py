@@ -3,7 +3,7 @@ import os
 import requests
 import shutil
 from time import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 from dane import Document
@@ -148,15 +148,6 @@ def transfer_output(source_id: str) -> bool:
     return True
 
 
-def obtain_files_to_upload_to_s3(output_dir: str) -> List[str]:
-    s3_file_list = []
-    for root, dirs, files in os.walk(output_dir):
-        for f in files:
-            s3_file_list.append(os.path.join(root, f))
-    return s3_file_list
-
-
-# NOTE: untested
 def delete_input_file(input_file: str, actually_delete: bool) -> bool:
     logger.info(f"Verifying deletion of input file: {input_file}")
     if actually_delete is False:
@@ -186,47 +177,22 @@ def delete_input_file(input_file: str, actually_delete: bool) -> bool:
     return True  # return True even if empty dirs were not removed
 
 
-def obtain_input_file(
-    handler, doc: Document
-) -> Tuple[Optional[DownloadResult], Optional[Provenance]]:
+def get_dane_download_worker_provenance(handler, doc: Document) -> Optional[Provenance]:
+    # the input doc MUST have a url
+    if not doc.target or "url" not in doc.target or not doc.target.get("url", None):
+        logger.info("No url found in DANE doc")
+        return None
+
+    dane_input_url = doc.target.get("url")
+
     # step 1: try to fetch the content via the configured DANE download worker
     download_result = _fetch_dane_download_result(handler, doc)
 
-    # step 2: try to download the file if no DANE download worker was configured
-    if download_result is None:
-        logger.info(
-            "The file was not downloaded by the DANE worker, downloading it myself..."
-        )
-        download_result = _download_dane_target_url(doc)
-
-    if download_result:
-        download_provenance = Provenance(
-            activity_name="download",
-            activity_description="Download source media",
-            start_time_unix=-1,  # TODO not supllied yet by download worker
-            processing_time_ms=-1,  # TODO not supllied yet by download worker
-            input_data={},
-            output_data={"file_path": download_result.file_path},
-        )
-        return download_result, download_provenance
-    logger.error("Could not download the content in any way")
-    return None, None
-
-
-# https://www.openbeelden.nl/files/29/29494.29451.WEEKNUMMER243-HRE00015742.mp4
-def _download_dane_target_url(doc: Document) -> Optional[DownloadResult]:
-    if not doc.target or "url" not in doc.target or not doc.target["url"]:
-        logger.info("No url found in DANE doc")
-        return None
-    return download_uri(doc.target["url"])
-
-
-def download_uri(uri: str) -> Optional[DownloadResult]:
-    logger.info(f"Trying to download {uri}")
-    if validate_s3_uri(uri):
-        logger.info("URI seems to be an s3 uri")
-        return s3_download(uri)
-    return http_download(uri)
+    return (
+        to_download_provenance(download_result, dane_input_url)
+        if download_result
+        else None
+    )
 
 
 def _fetch_dane_download_result(handler, doc: Document) -> Optional[DownloadResult]:
@@ -243,6 +209,14 @@ def _fetch_dane_download_result(handler, doc: Document) -> Optional[DownloadResu
         )
     logger.error("No file_path found in download result")
     return None
+
+
+def download_uri(uri: str) -> Optional[DownloadResult]:
+    logger.info(f"Trying to download {uri}")
+    if validate_s3_uri(uri):
+        logger.info("URI seems to be an s3 uri")
+        return s3_download(uri)
+    return http_download(uri)
 
 
 # TODO test this!
@@ -297,3 +271,16 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
         )
     logger.error("Failed to download input data from S3")
     return None
+
+
+def to_download_provenance(
+    download_result: DownloadResult, input_file_path: str
+) -> Provenance:
+    return Provenance(
+        activity_name="Download VisXP input",
+        activity_description="Download source AV media",
+        start_time_unix=-1,  # TODO not supplied yet by download worker
+        processing_time_ms=download_result.download_time,  # TODO not supllied yet by download worker
+        input_data={"input_file_path": input_file_path},
+        output_data={"file_path": download_result.file_path},
+    )
