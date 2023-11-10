@@ -29,6 +29,7 @@ from io_util import (
     get_provenance_file,
     to_download_provenance,
     transfer_output,
+    validate_data_dirs,
 )
 import spectogram
 
@@ -41,9 +42,15 @@ DANE_WORKER_ID = "dane-video-segmentation-worker"
 def run(
     input_file_path: str, download_provenance: Optional[Provenance] = None
 ) -> Tuple[CallbackResponse, Optional[Provenance]]:
+    # there must be an input file
     if not input_file_path:
         logger.error("input file empty")
         return {"state": 403, "message": "Error, no input file"}, []
+
+    # check if the file system is setup properly
+    if not validate_data_dirs():
+        logger.info("ERROR: data dirs not configured properly")
+        return {"state": 500, "message": "Input & output dirs not ok"}, []
 
     # create the top-level provenance
     top_level_provenance = generate_initial_provenance(

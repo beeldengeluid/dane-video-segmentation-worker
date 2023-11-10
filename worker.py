@@ -1,6 +1,6 @@
 import logging
 import os
-from pathlib import Path
+from pika.exceptions import ChannelClosedByBroker
 import sys
 from typing import Optional
 
@@ -11,13 +11,10 @@ from dane.config import cfg
 from dane.provenance import Provenance
 from models import CallbackResponse
 from io_util import (
-    get_base_output_dir,
     get_dane_download_worker_provenance,
     get_source_id,
     get_s3_output_file_uri,
-    get_download_dir,
 )
-from pika.exceptions import ChannelClosedByBroker
 import main_data_processor
 
 
@@ -27,43 +24,18 @@ logger = logging.getLogger()
 class VideoSegmentationWorker(base_worker):
     def __init__(self, config):
         logger.info(config)
+        self.UNIT_TESTING = os.getenv("DW_VISXP_PREP_UNIT_TESTING", False)
 
-        self.UNIT_TESTING = os.getenv("DW_VISXP_UNIT_TESTING", False)
-
+        # first validate the config
         if not validate_config(config, not self.UNIT_TESTING):
             logger.error("Invalid config, quitting")
             sys.exit()
 
-        # first make sure the config has everything we need
-        # Note: base_config is loaded first by DANE,
-        # so make sure you overwrite everything in your config.yml!
-        try:
-            self.DANE_DEPENDENCIES: list = (
-                config.DANE_DEPENDENCIES if "DANE_DEPENDENCIES" in config else []
-            )
-
-            # read from default DANE settings
-            self.DELETE_INPUT_ON_COMPLETION: bool = config.INPUT.DELETE_ON_COMPLETION
-            self.DELETE_OUTPUT_ON_COMPLETION: bool = config.OUTPUT.DELETE_ON_COMPLETION
-            self.TRANSFER_OUTPUT_ON_COMPLETION: bool = (
-                config.OUTPUT.TRANSFER_ON_COMPLETION
-            )
-
-        except AttributeError:
-            logger.exception("Missing configuration setting")
-            sys.exit()
-
-        # check if the file system is setup properly
-        if not self.validate_data_dirs(get_download_dir(), get_base_output_dir()):
-            logger.info("ERROR: data dirs not configured properly")
-            if not self.UNIT_TESTING:
-                sys.exit()
-
-        # we specify a queue name because every worker of this type should
-        # listen to the same queue
         self.__queue_name = "VISXP_PREP"  # this is the queue that receives the work and NOT the reply queue
         self.__binding_key = "#.VISXP_PREP"  # ['Video.VISXP_PREP', 'Sound.VISXP_PREP']
-        self.__depends_on = self.DANE_DEPENDENCIES  # TODO make this part of DANE lib?
+        self.__depends_on = (
+            list(config.DANE_DEPENDENCIES) if "DANE_DEPENDENCIES" in config else []
+        )
 
         if not self.UNIT_TESTING:
             logger.warning("Need to initialize the VISXP_PREP service")
@@ -86,35 +58,6 @@ class VideoSegmentationWorker(base_worker):
                 "name": "VISXP_PREP",
                 "homepage": "https://github.com/beeldengeluid/dane-video-segmentation-worker",
             }
-
-    """----------------------------------INIT VALIDATION FUNCTIONS ---------------------------------"""
-
-    def validate_data_dirs(self, input_dir: str, visxp_output_dir: str) -> bool:
-        i_dir = Path(input_dir)
-        o_dir = Path(visxp_output_dir)
-
-        if not os.path.exists(i_dir.parent.absolute()):
-            logger.info(
-                "{} does not exist. Make sure BASE_MOUNT_DIR exists before retrying".format(
-                    i_dir.parent.absolute()
-                )
-            )
-            return False
-
-        # make sure the input and output dirs are there
-        try:
-            os.makedirs(i_dir, 0o755)
-            logger.info("created VisXP input dir: {}".format(i_dir))
-        except FileExistsError as e:
-            logger.info(e)
-
-        try:
-            os.makedirs(o_dir, 0o755)
-            logger.info("created VisXP output dir: {}".format(o_dir))
-        except FileExistsError as e:
-            logger.info(e)
-
-        return True
 
     """----------------------------------INTERACTION WITH DANE SERVER ---------------------------------"""
 

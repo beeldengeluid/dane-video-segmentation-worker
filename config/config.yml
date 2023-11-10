@@ -1,11 +1,3 @@
-# Important for understanding DANE configs: https://github.com/CLARIAH/DANE/blob/main/DANE/config.py
-
-# Important note:
-# FIRST the home dir config is applied (~/.DANE/config.yml),
-# THEN the base_config.yml will overwrite anything,
-# THEN the local config.yml
-
-#Note: For local testing, copy this file to config.yml (in main dir of this repo)
 RABBITMQ:
     HOST: dane-rabbitmq-api.default.svc.cluster.local
     PORT: 5672

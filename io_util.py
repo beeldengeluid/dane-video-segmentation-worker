@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 import requests
 import shutil
 from time import time
@@ -22,6 +23,38 @@ S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.PROVENANCE,
     OutputType.METADATA,
 ]  # only upload this output to S3
+
+
+# make sure the necessary base dirs are there
+def validate_data_dirs() -> bool:
+    i_dir = Path(get_download_dir())
+    o_dir = Path(get_base_output_dir())
+    logger.info(
+        f"Making sure the input ({i_dir}) & output ({o_dir}) dirs are available"
+    )
+
+    if not os.path.exists(i_dir.parent.absolute()):
+        logger.info(
+            "{} does not exist. Make sure BASE_MOUNT_DIR exists before retrying".format(
+                i_dir.parent.absolute()
+            )
+        )
+        return False
+
+    # make sure the input and output dirs are there
+    try:
+        os.makedirs(i_dir, 0o755)
+        logger.info("created VisXP input dir: {}".format(i_dir))
+    except FileExistsError as e:
+        logger.info(e)
+
+    try:
+        os.makedirs(o_dir, 0o755)
+        logger.info("created VisXP output dir: {}".format(o_dir))
+    except FileExistsError as e:
+        logger.info(e)
+
+    return True
 
 
 def get_download_dir():

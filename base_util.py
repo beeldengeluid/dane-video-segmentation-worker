@@ -62,8 +62,27 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
         assert check_setting(config.PATHS.OUT_FOLDER, str), "PATHS.OUT_FOLDER"
 
         # Settings for this DANE worker
-        # ....
+        assert config.VISXP_PREP, "VISXP_PREP sub-config missing"
+        assert check_setting(
+            config.VISXP_PREP.RUN_HECATE, bool
+        ), "VISXP_PREP.RUN_HECATE"
+        assert check_setting(
+            config.VISXP_PREP.RUN_KEYFRAME_EXTRACTION, bool
+        ), "VISXP_PREP.RUN_KEYFRAME_EXTRACTION"
+        assert check_setting(
+            config.VISXP_PREP.RUN_AUDIO_EXTRACTION, bool
+        ), "VISXP_PREP.RUN_AUDIO_EXTRACTION"
+        assert check_setting(
+            config.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS, int
+        ), "VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS"
+        assert check_setting(
+            config.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ, list
+        ), "VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ"
+        assert check_setting(
+            config.VISXP_PREP.TEST_INPUT_FILE, list, True
+        ), "VISXP_PREP.TEST_INPUT_FILE"
 
+        # the FILE_SYSTEM sub config
         assert config.FILE_SYSTEM, "FILE_SYSTEM"
         assert check_setting(
             config.FILE_SYSTEM.BASE_MOUNT, str
@@ -118,7 +137,7 @@ def check_setting(setting: Any, t: type, optional=False) -> bool:
 
 def __check_dane_dependencies(deps: Any) -> bool:
     deps_to_check: list = deps if type(deps) is list else []
-    deps_allowed = ["DOWNLOAD", "BG_DOWNLOAD"]
+    deps_allowed = ["DOWNLOAD"]
     return any(dep in deps_allowed for dep in deps_to_check)
 
 
