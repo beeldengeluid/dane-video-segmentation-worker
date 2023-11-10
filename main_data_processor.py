@@ -1,7 +1,16 @@
+from functools import reduce
 import logging
-from time import time
+from typing import Optional, Tuple
+import validators
 
 from dane.config import cfg
+from dane.provenance import (
+    Provenance,
+    obtain_software_versions,
+    generate_initial_provenance,
+    stop_timer_and_persist_provenance_chain,
+)
+from dane.s3_util import validate_s3_uri
 import hecate
 import keyframe_extraction
 from models import (
@@ -16,20 +25,94 @@ from io_util import (
     generate_output_dirs,
     delete_local_output,
     delete_input_file,
+    download_uri,
+    get_provenance_file,
+    to_download_provenance,
     transfer_output,
+    validate_data_dirs,
 )
-from provenance import generate_full_provenance_chain
 import spectogram
 
 
 logger = logging.getLogger(__name__)
+DANE_WORKER_ID = "dane-video-segmentation-worker"
+
+
+# triggered by running: python worker.py --run-test-file
+def run(
+    input_file_path: str, download_provenance: Optional[Provenance] = None
+) -> Tuple[CallbackResponse, Optional[Provenance]]:
+    # there must be an input file
+    if not input_file_path:
+        logger.error("input file empty")
+        return {"state": 403, "message": "Error, no input file"}, []
+
+    # check if the file system is setup properly
+    if not validate_data_dirs():
+        logger.info("ERROR: data dirs not configured properly")
+        return {"state": 500, "message": "Input & output dirs not ok"}, []
+
+    # create the top-level provenance
+    top_level_provenance = generate_initial_provenance(
+        name="Generate input data for VisXP feature extraction",
+        description=(
+            "Detect shots and keyframes, "
+            "extract keyframes and corresponding audio spectograms"
+        ),
+        input_data={"input_file_path": input_file_path},  # TODO S3 URI!
+        parameters=dict(cfg.VISXP_PREP),
+        software_version=obtain_software_versions(DANE_WORKER_ID),
+    )
+    provenance_chain = []  # will contain the steps of the top-level provenance
+
+    # check if the input_file_path was already downloaded or not, if not do so
+    if not download_provenance:
+        logger.info(f"Analyzing input file: {input_file_path}")
+        if validate_s3_uri(input_file_path) or validators.url(input_file_path):
+            logger.info("Input is a URI, contuining to download")
+            download_result = download_uri(input_file_path)
+            if not download_result:
+                return {
+                    "state": 500,
+                    "message": f"Could not download {input_file_path}",
+                }, []
+            else:
+                download_provenance = to_download_provenance(
+                    download_result, input_file_path
+                )
+                input_file_path = download_result.file_path if download_result else ""
+
+    provenance_chain.append(download_provenance)  # add the download provenance
+    proc_result = generate_input_for_feature_extraction(input_file_path)
+
+    if proc_result.provenance_chain:
+        provenance_chain.extend(proc_result.provenance_chain)
+
+    # as a last piece of output, generate the provenance.json before packaging and uploading
+    full_provenance_chain = stop_timer_and_persist_provenance_chain(
+        provenance=top_level_provenance,
+        output_data=reduce(
+            lambda a, b: {**a, **b},
+            [p.output_data for p in provenance_chain],
+        ),
+        provenance_chain=provenance_chain,
+        provenance_file_path=get_provenance_file(input_file_path),
+    )
+
+    validated_output: CallbackResponse = apply_desired_io_on_output(
+        input_file_path,
+        proc_result,
+        cfg.INPUT.DELETE_ON_COMPLETION,
+        cfg.OUTPUT.DELETE_ON_COMPLETION,
+        cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+    )
+    return validated_output, full_provenance_chain
 
 
 # generates all the required output for the 2nd DANE worker
 def generate_input_for_feature_extraction(
     input_file_path: str,
 ) -> VisXPFeatureExtractionInput:
-    start_time = time()
     logger.info(f"Processing input: {input_file_path}")
 
     # Step 0: this is the "processing ID" if you will
@@ -78,19 +161,14 @@ def generate_input_for_feature_extraction(
             output_dirs[OutputType.TMP.value],
         )
 
-    # finally generate the provenance chain before returning the generated results
-    provenance = generate_full_provenance_chain(
-        start_time,
-        input_file_path,
+    return VisXPFeatureExtractionInput(
+        200,
+        "Succesfully generated input for VisXP feature extraction",
         [
             p
             for p in [hecate_provenance, keyframe_provenance, spectogram_provenance]
             if p is not None
         ],
-    )
-
-    return VisXPFeatureExtractionInput(
-        200, "Succesfully generated input for VisXP feature extraction", provenance
     )
 
 
