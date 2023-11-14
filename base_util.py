@@ -7,13 +7,6 @@ import logging
 import hashlib
 
 
-"""
-Important note on how DANE builds up it's config (which is supplied to validate_config):
-
-    FIRST the home dir config is applied (~/.DANE/config.yml),
-    THEN the local base_config.yml will overwrite anything specified
-    THEN the local config.yml will overwrite anything specified there
-"""
 LOG_FORMAT = "%(asctime)s|%(levelname)s|%(process)d|%(module)s|%(funcName)s|%(lineno)d|%(message)s"
 logger = logging.getLogger(__name__)
 
@@ -61,6 +54,16 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
         assert check_setting(config.PATHS.TEMP_FOLDER, str), "PATHS.TEMP_FOLDER"
         assert check_setting(config.PATHS.OUT_FOLDER, str), "PATHS.OUT_FOLDER"
 
+        # the FILE_SYSTEM sub config
+        assert config.FILE_SYSTEM, "FILE_SYSTEM"
+        assert check_setting(
+            config.FILE_SYSTEM.BASE_MOUNT, str
+        ), "FILE_SYSTEM.BASE_MOUNT"
+        assert check_setting(config.FILE_SYSTEM.INPUT_DIR, str), "FILE_SYSTEM.INPUT_DIR"
+        assert check_setting(
+            config.FILE_SYSTEM.OUTPUT_DIR, str
+        ), "FILE_SYSTEM.OUTPUT_DIR"
+
         # Settings for this DANE worker
         assert config.VISXP_PREP, "VISXP_PREP sub-config missing"
         assert check_setting(
@@ -82,15 +85,28 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
             config.VISXP_PREP.TEST_INPUT_FILE, list, True
         ), "VISXP_PREP.TEST_INPUT_FILE"
 
-        # the FILE_SYSTEM sub config
-        assert config.FILE_SYSTEM, "FILE_SYSTEM"
+        # settings for input & output handling
+        assert config.INPUT, "INPUT"
         assert check_setting(
-            config.FILE_SYSTEM.BASE_MOUNT, str
-        ), "FILE_SYSTEM.BASE_MOUNT"
-        assert check_setting(config.FILE_SYSTEM.INPUT_DIR, str), "FILE_SYSTEM.INPUT_DIR"
+            config.INPUT.DELETE_ON_COMPLETION, bool
+        ), "INPUT.DELETE_ON_COMPLETION"
+
+        assert config.OUTPUT, "OUTPUT"
         assert check_setting(
-            config.FILE_SYSTEM.OUTPUT_DIR, str
-        ), "FILE_SYSTEM.OUTPUT_DIR"
+            config.OUTPUT.DELETE_ON_COMPLETION, bool
+        ), "OUTPUT.DELETE_ON_COMPLETION"
+        assert check_setting(
+            config.OUTPUT.TRANSFER_ON_COMPLETION, bool
+        ), "OUTPUT.TRANSFER_ON_COMPLETION"
+        if config.OUTPUT.TRANSFER_ON_COMPLETION:
+            # required only in case output must be transferred
+            assert check_setting(
+                config.OUTPUT.S3_ENDPOINT_URL, str
+            ), "OUTPUT.S3_ENDPOINT_URL"
+            assert check_setting(config.OUTPUT.S3_BUCKET, str), "OUTPUT.S3_BUCKET"
+            assert check_setting(
+                config.OUTPUT.S3_FOLDER_IN_BUCKET, str
+            ), "OUTPUT.S3_FOLDER_IN_BUCKET"
 
         assert __check_dane_dependencies(config.DANE_DEPENDENCIES), "DANE_DEPENDENCIES"
 
