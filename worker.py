@@ -116,9 +116,9 @@ class VideoSegmentationWorker(base_worker):
                 "doc_target_id": doc.target["id"],
                 "doc_target_url": doc.target["url"],
                 "s3_location": s3_location,
-                "provenance": provenance.to_json()
-                if provenance
-                else {"error": "something is off"},
+                # "provenance": provenance.to_json()
+                # if provenance
+                # else {"error": "something is off"},
             },
             api=self.handler,
         )
