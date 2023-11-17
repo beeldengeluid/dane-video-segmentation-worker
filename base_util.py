@@ -82,7 +82,7 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
             config.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ, list
         ), "VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ"
         assert check_setting(
-            config.VISXP_PREP.TEST_INPUT_FILE, list, True
+            config.VISXP_PREP.TEST_INPUT_FILE, str, True
         ), "VISXP_PREP.TEST_INPUT_FILE"
 
         # settings for input & output handling
