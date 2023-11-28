@@ -1,14 +1,15 @@
 version: '3'
 services:
   web:
-    image: dane-video-segmentation-worker:latest
+    # image: dane-video-segmentation-worker:latest
+    image: scendetect:latest
     volumes:
       - ./data:/data
       - ./config:/root/.DANE
     container_name: visxp
-    command: --run-test-file  # NOTE: comment this line to spin up th worker
-    env_file:
-      - s3-creds.env
+    # command: --run-test-file  # NOTE: comment this line to spin up th worker
+    # env_file:
+    #   - s3-creds.env
     logging:
       options:
         max-size: 20m
