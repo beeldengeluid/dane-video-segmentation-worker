@@ -57,7 +57,7 @@ def run(input_file_path: str, output_dir: str) -> Provenance:
 
 
 # extracts the keyframe timestamps from the generated CSV file
-def get_keyframe_timestamps(output_dir: str) -> List[float]:
+def get_keyframe_timestamps(output_dir: str) -> List[int]:
     logger.info("Extracting keyframe timestamps")
     output_csv = _get_csv_file_path(output_dir)
     if not os.path.exists(output_csv):
