@@ -66,6 +66,7 @@ def raw_audio_to_spectograms(
     window_size_ms: int = 1000,
     z_normalize: bool = True,
 ):
+    fns = []
     for keyframe in keyframe_timestamps:
         if (
             keyframe + window_size_ms / 2 > len(raw_audio)
@@ -78,7 +79,6 @@ def raw_audio_to_spectograms(
         logger.info(
             f"Extracting window at {keyframe} ms. Frames {from_frame} to {to_frame}."
         )
-        fns = []
         spectogram = get_spec(
             raw_audio[from_frame:to_frame], sample_rate, z_normalize=z_normalize
         )

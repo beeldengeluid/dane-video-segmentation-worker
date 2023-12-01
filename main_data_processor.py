@@ -84,7 +84,9 @@ def run(
                 )
                 input_file_path = download_result.file_path if download_result else ""
 
-    provenance_chain.append(download_provenance)  # add the download provenance
+    if download_provenance:
+        logger.info("Adding download provenance to provenance chain")
+        provenance_chain.append(download_provenance)  # add the download provenance
     proc_result = generate_input_for_feature_extraction(input_file_path)
 
     if proc_result.provenance_chain:
