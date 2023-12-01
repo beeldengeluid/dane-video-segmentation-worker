@@ -3,6 +3,7 @@
 /data/*
 !/data/README.md
 __pycache__
+.pytest_cache
 .coverage
 /tests/data/mp4s/*
 !/tests/data/mp4s/test.mp4
