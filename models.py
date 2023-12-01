@@ -20,6 +20,10 @@ class HecateOutput(Enum):
     SHOT_BOUNDARIES = "shot_boundaries_timestamps_ms.txt"
 
 
+class ScenedetectOutput(Enum):
+    KEYFRAME_METADATA_CSV = "keyframes_metadata.csv"
+
+
 # returned by callback()
 class CallbackResponse(TypedDict):
     state: int

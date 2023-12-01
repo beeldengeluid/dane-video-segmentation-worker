@@ -11,12 +11,13 @@ from dane.provenance import (
     stop_timer_and_persist_provenance_chain,
 )
 from dane.s3_util import validate_s3_uri
-import hecate
-import keyframe_extraction
+
+# import hecate
+# import keyframe_extraction
 from models import (
     VisXPFeatureExtractionInput,
     OutputType,
-    HecateOutput,
+    # HecateOutput,
     CallbackResponse,
 )
 from io_util import (
@@ -32,6 +33,7 @@ from io_util import (
     validate_data_dirs,
 )
 import spectogram
+import scenedetect
 
 
 logger = logging.getLogger(__name__)
@@ -121,32 +123,43 @@ def generate_input_for_feature_extraction(
     # Step 1: generate output dir per OutputType
     output_dirs = generate_output_dirs(source_id)
 
-    hecate_provenance = None
-    keyframe_provenance = None
+    # hecate_provenance = None
+    # keyframe_provenance = None
+    scenedetect_provenance = None
     spectogram_provenance = None
 
-    if cfg.VISXP_PREP.RUN_HECATE:
-        hecate_provenance = hecate.run(
-            input_file_path, output_dirs[OutputType.METADATA.value]
-        )
+    # scenedetect generates (keyframe) metadata and keyframes
+    scenedetect_provenance = scenedetect.run(
+        input_file_path, get_base_output_dir(source_id)
+    )
 
-    if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
-        keyframe_indices = hecate.get_output(
-            output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
-        )
-        if not keyframe_indices:
-            logger.error("Could not find keyframe_indices")
-            return VisXPFeatureExtractionInput(
-                500, "Could not find keyframe_indices", None
-            )
+    # if cfg.VISXP_PREP.RUN_HECATE:
+    #     hecate_provenance = hecate.run(
+    #         input_file_path, output_dirs[OutputType.METADATA.value]
+    #     )
 
-        keyframe_provenance = keyframe_extraction.run(
-            input_file_path, keyframe_indices, output_dirs[OutputType.KEYFRAMES.value]
-        )
+    # NOTE this step can be skipped with scenedetect
+    # if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
+    #     keyframe_indices = hecate.get_output(
+    #         output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
+    #     )
+    #     if not keyframe_indices:
+    #         logger.error("Could not find keyframe_indices")
+    #         return VisXPFeatureExtractionInput(
+    #             500, "Could not find keyframe_indices", None
+    #         )
 
+    #     keyframe_provenance = keyframe_extraction.run(
+    #         input_file_path, keyframe_indices, output_dirs[OutputType.KEYFRAMES.value]
+    #     )
+
+    # TODO adapt to work with the output of Scenedetect
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
-        keyframe_timestamps = hecate.get_output(
-            output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
+        # keyframe_timestamps = hecate.get_output(
+        #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
+        # )
+        keyframe_timestamps = scenedetect.get_keyframe_timestamps(
+            get_base_output_dir(source_id)
         )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")
@@ -166,7 +179,10 @@ def generate_input_for_feature_extraction(
         "Succesfully generated input for VisXP feature extraction",
         [
             p
-            for p in [hecate_provenance, keyframe_provenance, spectogram_provenance]
+            for p in [
+                scenedetect_provenance,
+                spectogram_provenance,
+            ]  # hecate_provenance, keyframe_provenance
             if p is not None
         ],
     )
