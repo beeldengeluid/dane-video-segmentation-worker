@@ -7,6 +7,7 @@ from time import time
 from typing import List
 from dane.config import cfg
 from dane.provenance import Provenance
+from base_util import run_shell_command
 
 
 logger = logging.getLogger(__name__)
@@ -58,8 +59,34 @@ def get_raw_audio(media_file: str, sample_rate: int):
     return raw_audio
 
 
+def get_media_file_length(media_file: str):
+    result = run_shell_command(
+        " ".join(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                media_file,
+            ]
+        ),
+    )
+    return int(float(result) * 1000)  # NOTE unsafe! (convert secs to ms)
+
+
+"""
+visxp  | 2023-12-04 15:06:11,636|INFO|8|spectogram|raw_audio_to_spectograms|71|104840, len = 2520064
+visxp  | 2023-12-04 15:06:11,636|INFO|8|spectogram|raw_audio_to_spectograms|80|Extracting window at 104840 ms. Frames 2504160 to 2528160.
+visxp  | 2023-12-04 15:06:11,652|INFO|8|spectogram|raw_audio_to_spectograms|86|Spectogram is a np array with dimensions: (1, 257, 66)
+"""
+
+
 def raw_audio_to_spectograms(
     raw_audio: np.ndarray,
+    duration_ms: int,
     keyframe_timestamps: list[int],  # ms timestamps
     location: str,
     sample_rate,
@@ -68,9 +95,9 @@ def raw_audio_to_spectograms(
 ):
     fns = []
     for keyframe in keyframe_timestamps:
-        if (
-            keyframe + window_size_ms / 2 > len(raw_audio)
-            or keyframe < window_size_ms / 2
+        logger.info(f"{keyframe}, len = {len(raw_audio)} duration = {duration_ms}")
+        if keyframe + (window_size_ms / 2) > duration_ms or keyframe < (
+            window_size_ms / 2
         ):
             logger.info(f"Skipping extraction at {keyframe} ms: too close to the edge.")
             continue
@@ -116,10 +143,12 @@ def extract_audio_spectograms(
     window_size_ms: int = 1000,
 ):
     logger.info(f"Convert audio to wav at {sample_rate}Hz.")
+    duration_ms = get_media_file_length(media_file)
     raw_audio = get_raw_audio(media_file=media_file, sample_rate=sample_rate)
     logger.info("obtain spectograms")
     fns = raw_audio_to_spectograms(
         raw_audio=raw_audio,
+        duration_ms=duration_ms,
         keyframe_timestamps=keyframe_timestamps,
         location=location,
         sample_rate=sample_rate,
