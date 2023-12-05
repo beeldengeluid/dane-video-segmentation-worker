@@ -144,22 +144,31 @@ def generate_input_for_feature_extraction(
     #         input_file_path, output_dirs[OutputType.METADATA.value]
     #     )
 
+    keyframe_indices = scenedetect.get_keyframe_indices(
+        get_base_output_dir(media_file.source_id),
+        media_file.duration_ms,
+        cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+    )
+    keyframe_timestamps = scenedetect.get_keyframe_timestamps(
+        get_base_output_dir(media_file.source_id),
+        media_file.duration_ms,
+        cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+    )
+
     # NOTE this step can be skipped with scenedetect
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
         # keyframe_indices = hecate.get_output(
         #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
         # )
-        keyframe_indices = scenedetect.get_keyframe_indices(
-            get_base_output_dir(media_file.source_id),
-            media_file.duration_ms,
-            cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
-        )
         if not keyframe_indices:
             logger.error("Could not find keyframe_indices")
             return VisXPFeatureExtractionInput(500, "Could not find keyframe_indices")
 
         keyframe_provenance = keyframe_extraction.run(
-            input_file_path, keyframe_indices, output_dirs[OutputType.KEYFRAMES.value]
+            input_file_path,
+            keyframe_indices,
+            keyframe_timestamps,
+            output_dirs[OutputType.KEYFRAMES.value],
         )
 
     # TODO adapt to work with the output of Scenedetect
@@ -167,11 +176,6 @@ def generate_input_for_feature_extraction(
         # keyframe_timestamps = hecate.get_output(
         #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
         # )
-        keyframe_timestamps = scenedetect.get_keyframe_timestamps(
-            get_base_output_dir(media_file.source_id),
-            media_file.duration_ms,
-            cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
-        )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")
             return VisXPFeatureExtractionInput(

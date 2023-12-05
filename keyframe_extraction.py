@@ -12,7 +12,10 @@ logger = logging.getLogger(__name__)
 
 # Step 2: run keyframe extraction based on list of keyframe indices
 def run(
-    input_file_path: str, keyframe_indices: List[int], output_dir: str
+    input_file_path: str,
+    keyframe_indices: List[int],
+    keyframe_timestamps: List[int],
+    output_dir: str,
 ) -> Provenance:
     start_time = time()
     logger.info("Extracting keyframe images now.")
@@ -20,6 +23,7 @@ def run(
     keyframe_files = extract_keyframes(
         media_file=input_file_path,
         keyframe_indices=keyframe_indices,
+        keyframe_timestamps=keyframe_timestamps,
         out_dir=output_dir,
     )
     logger.info(f"Extracted {len(keyframe_indices)} keyframes.")
@@ -37,7 +41,10 @@ def run(
 
 
 def extract_keyframes(
-    media_file: str, keyframe_indices: list[int], out_dir: str
+    media_file: str,
+    keyframe_indices: list[int],
+    keyframe_timestamps: list[int],
+    out_dir: str,
 ) -> list[str]:
     if not os.path.exists(media_file):
         raise IOError("Input video not found")
@@ -51,8 +58,11 @@ def extract_keyframes(
     fns = []
     while next_i <= max_i:
         ret = vcap.grab()
+        # FIXME e.g. index 13048 --> 521920, round makes this 521919
         if next_i in keyframe_indices:
-            timestamp = round(vcap.get(cv2.CAP_PROP_POS_MSEC))  # msec position
+            # timestamp = round(vcap.get(cv2.CAP_PROP_POS_MSEC))  # msec position
+            timestamp = keyframe_timestamps[keyframe_indices.index(int(next_i))]
+            logger.info(f"index {int(next_i)} = {timestamp}")
             if ret:
                 _, frame = vcap.retrieve()
                 fn = os.path.join(out_dir, f"{timestamp}.jpg")

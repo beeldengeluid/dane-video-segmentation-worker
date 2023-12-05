@@ -42,7 +42,6 @@ def get_media_file_length(media_file: str):
 
 
 def too_close_to_edge(keyframe_ms: int, duration_ms: int, window_size_ms: int):
-    logger.info(f"{keyframe_ms}, duration = {duration_ms}")
     if keyframe_ms + (window_size_ms / 2) > duration_ms or keyframe_ms < (
         window_size_ms / 2
     ):
