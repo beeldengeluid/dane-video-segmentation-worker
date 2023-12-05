@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 # TODO this main function should be configurable via config.yml
 def run(
-    input_file_path: str, keyframe_timestamps: List[int], output_dir: str, tmp_dir: str
-) -> Provenance:
+    input_file_path: str, keyframe_timestamps: List[int], output_dirs: dict) -> Provenance:
     start_time = time()
     logger.info("Extracting audio spectograms")
     sample_rates = cfg.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ
@@ -26,8 +25,7 @@ def run(
         sf = extract_audio_spectograms(
             media_file=input_file_path,
             keyframe_timestamps=keyframe_timestamps,
-            location=output_dir,
-            tmp_location=tmp_dir,
+            locations=output_dirs,
             sample_rate=sample_rate,
             window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
         )
@@ -44,7 +42,9 @@ def run(
             "input_file_path": input_file_path,
             "keyframe_timestamps": str(keyframe_timestamps),
         },
-        output_data={"spectogram_files": str(spectogram_files)},
+        output_data={"spectogram_files": str(spectogram_files),
+                     "spectogram_images": str(spectogram_images),
+                     "audio_samples": str(audio_samples)},
     )
 
 
@@ -95,6 +95,28 @@ def raw_audio_to_spectograms(
         np.savez(spec_path, out_dict)  # type: ignore
         fns.append(spec_path)
     return fns
+
+
+def generate_mp3_samples(
+        media_file: str,
+        location: str,
+        keyframe_timestamps: list[int],
+        window_size_ms: int = 1000,
+        ):
+    audio = ffmpeg.input(media_file)
+    for timestamp in keyframe_timestamps:
+        out_file = os.path.join(location, timestamp+'.mp3')
+        from_time = (timestamp - window_size_ms // 2)
+        to_time = (timestamp + window_size_ms // 2)
+        audio.output(
+                        out_file,
+                        **{
+                            "map": "0:a",
+                            "c:a": "copy",
+                            "ss": f"{from_time}ms",
+                            "to": f"{to_time}ms",
+                        },
+                    ).run(quiet=True, overwrite_output=True)
 
 
 def get_spec(wav_bit: np.ndarray, sample_rate: int):
