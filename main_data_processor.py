@@ -20,8 +20,8 @@ from models import (
     # HecateOutput,
     CallbackResponse,
 )
+from media_file_util import validate_media_file
 from io_util import (
-    get_source_id,
     get_base_output_dir,
     generate_output_dirs,
     delete_local_output,
@@ -103,12 +103,13 @@ def run(
         provenance_file_path=get_provenance_file(input_file_path),
     )
 
-    validated_output: CallbackResponse = apply_desired_io_on_output(
-        input_file_path,
-        proc_result,
-        cfg.INPUT.DELETE_ON_COMPLETION,
-        cfg.OUTPUT.DELETE_ON_COMPLETION,
-        cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+    validated_output: CallbackResponse = (
+        apply_desired_io_on_output(  # TODO make sure the media file is there
+            proc_result,
+            cfg.INPUT.DELETE_ON_COMPLETION,
+            cfg.OUTPUT.DELETE_ON_COMPLETION,
+            cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+        )
     )
     return validated_output, full_provenance_chain
 
@@ -119,11 +120,12 @@ def generate_input_for_feature_extraction(
 ) -> VisXPFeatureExtractionInput:
     logger.info(f"Processing input: {input_file_path}")
 
-    # Step 0: this is the "processing ID" if you will
-    source_id = get_source_id(input_file_path)
+    media_file = validate_media_file(input_file_path)
+    if not media_file:
+        return VisXPFeatureExtractionInput(500, "Invalid or missing media file")
 
     # Step 1: generate output dir per OutputType
-    output_dirs = generate_output_dirs(source_id)
+    output_dirs = generate_output_dirs(media_file.source_id)
 
     # hecate_provenance = None
     keyframe_provenance = None
@@ -133,7 +135,9 @@ def generate_input_for_feature_extraction(
     # scenedetect generates (keyframe) metadata and keyframes
     scenedetect_provenance = scenedetect.run(
         input_file_path,
-        get_base_output_dir(source_id),  # NOTE don't use scenedetect keyframe detection
+        get_base_output_dir(
+            media_file.source_id
+        ),  # NOTE don't use scenedetect keyframe detection
     )
 
     # if cfg.VISXP_PREP.RUN_HECATE:
@@ -147,13 +151,11 @@ def generate_input_for_feature_extraction(
         #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
         # )
         keyframe_indices = scenedetect.get_keyframe_indices(
-            get_base_output_dir(source_id)
+            get_base_output_dir(media_file.source_id)
         )
         if not keyframe_indices:
             logger.error("Could not find keyframe_indices")
-            return VisXPFeatureExtractionInput(
-                500, "Could not find keyframe_indices", None
-            )
+            return VisXPFeatureExtractionInput(500, "Could not find keyframe_indices")
 
         keyframe_provenance = keyframe_extraction.run(
             input_file_path, keyframe_indices, output_dirs[OutputType.KEYFRAMES.value]
@@ -165,12 +167,12 @@ def generate_input_for_feature_extraction(
         #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
         # )
         keyframe_timestamps = scenedetect.get_keyframe_timestamps(
-            get_base_output_dir(source_id)
+            get_base_output_dir(media_file.source_id)
         )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")
             return VisXPFeatureExtractionInput(
-                500, "Could not find keyframe_timestamps", None
+                500, "Could not find keyframe_timestamps"
             )
 
         spectogram_provenance = spectogram.run(
@@ -183,6 +185,7 @@ def generate_input_for_feature_extraction(
     return VisXPFeatureExtractionInput(
         200,
         "Succesfully generated input for VisXP feature extraction",
+        media_file,
         [
             p
             for p in [
@@ -197,28 +200,31 @@ def generate_input_for_feature_extraction(
 
 # assesses the output and makes sure input & output is handled properly
 def apply_desired_io_on_output(
-    input_file: str,
     proc_result: VisXPFeatureExtractionInput,
     delete_input_on_completion: bool,
     delete_output_on_completetion: bool,
     transfer_output_on_completion: bool,
 ) -> CallbackResponse:
+    media_file = proc_result.media_file
+    if not media_file:
+        return {"state": 404, "message": "No media file in processing result"}
     # step 4: raise exception on failure
     if proc_result.state != 200:
         logger.error(f"Could not process the input properly: {proc_result.message}")
-        input_deleted = delete_input_file(input_file, delete_input_on_completion)
+        input_deleted = delete_input_file(
+            media_file.file_path, delete_input_on_completion
+        )
         logger.info(f"Deleted input file of failed process: {input_deleted}")
         # something went wrong inside the VisXP work processor, return that response here
         return {"state": proc_result.state, "message": proc_result.message}
 
     # step 5: process returned successfully, generate the output
-    source_id = get_source_id(input_file)
-    visxp_output_dir = get_base_output_dir(source_id)
+    visxp_output_dir = get_base_output_dir(media_file.source_id)
 
     # step 6: transfer the output to S3 (if configured so)
     transfer_success = True
     if transfer_output_on_completion:
-        transfer_success = transfer_output(source_id)
+        transfer_success = transfer_output(media_file.source_id)
 
     if (
         not transfer_success
@@ -231,7 +237,7 @@ def apply_desired_io_on_output(
     # step 7: clear the output files (if configured so)
     delete_success = True
     if delete_output_on_completetion:
-        delete_success = delete_local_output(source_id)
+        delete_success = delete_local_output(media_file.source_id)
 
     if (
         not delete_success
@@ -239,7 +245,7 @@ def apply_desired_io_on_output(
         logger.warning(f"Could not delete output files: {visxp_output_dir}")
 
     # step 8: clean the input file (if configured so)
-    if not delete_input_file(input_file, delete_input_on_completion):
+    if not delete_input_file(media_file.file_path, delete_input_on_completion):
         return {
             "state": 500,
             "message": "Generated VISXP_PREP output, but could not delete the input file",
