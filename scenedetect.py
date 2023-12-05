@@ -5,9 +5,8 @@ from time import time
 from typing import Generator, List, Tuple
 from dane.provenance import Provenance, obtain_software_versions
 from base_util import run_shell_command
-
-# from media_file_util import too_close_to_edge
-from models import OutputType, ScenedetectOutput, HecateOutput
+from media_file_util import too_close_to_edge
+from models import OutputType, ScenedetectOutput, HecateOutput, MediaFile
 
 # TODO write some code
 
@@ -39,15 +38,20 @@ def _get_keyframe_indices_path(output_dir: str) -> str:
 
 
 # TODO also try the Python client
-def run(input_file_path: str, output_dir: str, extract_keyframes=False) -> Provenance:
-    logger.info(f"Running scenedetect on {input_file_path}")
+def run(
+    media_file: MediaFile,
+    output_dir: str,
+    window_size_ms: int = 1000,
+    extract_keyframes=False,
+) -> Provenance:
+    logger.info(f"Running scenedetect on {media_file}")
     start_time = time()
     output_csv = _get_csv_file_path(output_dir)
     keyframe_dir = _get_keyframe_dir(output_dir)
     cmd = [
         "scenedetect",
         "-i",
-        input_file_path,
+        media_file.file_path,
         "list-scenes",
         "-f",  # where to save the .csv file
         ScenedetectOutput.KEYFRAME_METADATA_CSV.value,
@@ -69,13 +73,13 @@ def run(input_file_path: str, output_dir: str, extract_keyframes=False) -> Prove
         )
     result = run_shell_command(" ".join(cmd))
     if not result:
-        logger.error(f"Failed to run scenedetect on {input_file_path}")
+        logger.error(f"Failed to run scenedetect on {media_file.file_path}")
 
     # for backwards compatability, save the HecateOutput.SHOT_BOUNDARIES
-    save_shot_boundaries_file(output_dir)
+    save_shot_boundaries_file(output_dir, media_file.duration_ms, window_size_ms)
 
     # for backwards compatability, save the HecateOutput.KEYFRAME_INDICES
-    save_keyframe_indices_file(output_dir)
+    save_keyframe_indices_file(output_dir, media_file.duration_ms, window_size_ms)
 
     return Provenance(
         activity_name="Python Scenedetect",
@@ -83,7 +87,7 @@ def run(input_file_path: str, output_dir: str, extract_keyframes=False) -> Prove
         start_time_unix=start_time,
         processing_time_ms=time() - start_time,
         software_version=obtain_software_versions(["scenedetect"]),
-        input_data={"input_file": input_file_path},
+        input_data={"input_file": media_file.file_path},
         output_data={
             "keyframe_dir": keyframe_dir,
             "output_csv": output_csv,
@@ -92,8 +96,10 @@ def run(input_file_path: str, output_dir: str, extract_keyframes=False) -> Prove
     )
 
 
-def save_shot_boundaries_file(output_dir: str) -> bool:
-    shot_boundaries = get_shot_boundaries(output_dir)
+def save_shot_boundaries_file(
+    output_dir: str, duration_ms: int, window_size_ms: int = 1000
+) -> bool:
+    shot_boundaries = get_shot_boundaries(output_dir, duration_ms, window_size_ms)
     shot_boundaries_file_path = _get_shot_boundaries_path(output_dir)
     logger.info(f"Saving shot boundaries to {shot_boundaries_file_path}")
     try:
@@ -105,8 +111,10 @@ def save_shot_boundaries_file(output_dir: str) -> bool:
     return True
 
 
-def save_keyframe_indices_file(output_dir: str) -> bool:
-    keyframe_indices = get_keyframe_indices(output_dir)
+def save_keyframe_indices_file(
+    output_dir: str, duration_ms: int, window_size_ms: int = 1000
+) -> bool:
+    keyframe_indices = get_keyframe_indices(output_dir, duration_ms, window_size_ms)
     keyframe_indices_file_path = _get_keyframe_indices_path(output_dir)
     logger.info(f"Saving shot boundaries to {keyframe_indices_file_path}")
     try:
@@ -119,24 +127,39 @@ def save_keyframe_indices_file(output_dir: str) -> bool:
 
 
 # extracts the keyframe timestamps from the generated CSV file
-def get_keyframe_timestamps(output_dir: str) -> List[int]:
+def get_keyframe_timestamps(
+    output_dir: str, duration_ms: int, window_size_ms: int = 1000
+) -> List[int]:
     logger.info("Extracting keyframe timestamps")
-    return [int(float(row[3]) * 1000) for row in load_csv_data(output_dir)]
+    return [
+        int(float(row[3]) * 1000)
+        for row in load_csv_data(output_dir)
+        if not too_close_to_edge(int(float(row[3]) * 1000), duration_ms, window_size_ms)
+    ]
 
 
 # extracts the keyframe timestamps from the generated CSV file
-def get_keyframe_indices(output_dir: str) -> List[int]:
+def get_keyframe_indices(
+    output_dir: str, duration_ms: int, window_size_ms: int = 1000
+) -> List[int]:
     logger.info("Extracting keyframe indices")
     # filter out the first frame also subtract 1 frame somehow
-    return [int(row[1]) - 1 for row in load_csv_data(output_dir) if int(row[1]) != 1]
+    return [
+        int(row[1]) - 1
+        for row in load_csv_data(output_dir)
+        if not too_close_to_edge(int(float(row[3]) * 1000), duration_ms, window_size_ms)
+    ]
 
 
 # extracts the keyframe timestamps from the generated CSV file
-def get_shot_boundaries(output_dir: str) -> List[Tuple[int, int]]:
+def get_shot_boundaries(
+    output_dir: str, duration_ms: int, window_size_ms: int = 1000
+) -> List[Tuple[int, int]]:
     logger.info("Extracting shot boundaries")
     return [
         (int(float(row[3]) * 1000), int(float(row[6]) * 1000))
         for row in load_csv_data(output_dir)
+        if not too_close_to_edge(int(float(row[3]) * 1000), duration_ms, window_size_ms)
     ]
 
 
@@ -153,20 +176,3 @@ def load_csv_data(output_dir: str) -> Generator:
         next(r)  # skip 3rd line (frame 1)
         for row in r:
             yield row
-
-
-if __name__ == "__main__":
-    import sys
-    from base_util import LOG_FORMAT
-
-    logging.basicConfig(
-        stream=sys.stdout,  # configure a stream handler only for now (single handler)
-        format=LOG_FORMAT,
-        level="INFO",
-    )
-    logger.info("Let us test this")
-    timestamps = get_keyframe_timestamps("./tests/data/scenedetect")
-    logger.info(len(timestamps))
-
-    shot_boundaries = get_shot_boundaries("./tests/data/scenedetect")
-    logger.info(len(shot_boundaries))

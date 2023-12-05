@@ -134,10 +134,9 @@ def generate_input_for_feature_extraction(
 
     # scenedetect generates (keyframe) metadata and keyframes
     scenedetect_provenance = scenedetect.run(
-        input_file_path,
-        get_base_output_dir(
-            media_file.source_id
-        ),  # NOTE don't use scenedetect keyframe detection
+        media_file,
+        get_base_output_dir(media_file.source_id),
+        cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
     )
 
     # if cfg.VISXP_PREP.RUN_HECATE:
@@ -151,7 +150,9 @@ def generate_input_for_feature_extraction(
         #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
         # )
         keyframe_indices = scenedetect.get_keyframe_indices(
-            get_base_output_dir(media_file.source_id)
+            get_base_output_dir(media_file.source_id),
+            media_file.duration_ms,
+            cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
         )
         if not keyframe_indices:
             logger.error("Could not find keyframe_indices")
@@ -167,7 +168,9 @@ def generate_input_for_feature_extraction(
         #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
         # )
         keyframe_timestamps = scenedetect.get_keyframe_timestamps(
-            get_base_output_dir(media_file.source_id)
+            get_base_output_dir(media_file.source_id),
+            media_file.duration_ms,
+            cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
         )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")

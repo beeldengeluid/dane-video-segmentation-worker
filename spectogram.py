@@ -8,7 +8,6 @@ from typing import List
 from dane.config import cfg
 from dane.provenance import Provenance
 from media_file_util import (
-    too_close_to_edge,
     get_start_frame,
     get_end_frame,
     get_media_file_length,
@@ -82,12 +81,6 @@ def raw_audio_to_spectograms(
 ):
     fns = []
     for keyframe_ms in keyframe_timestamps:
-        if too_close_to_edge(keyframe_ms, duration_ms, window_size_ms):
-            logger.info(
-                f"Skipping extraction at {keyframe_ms} ms: too close to the edge."
-            )
-            continue
-
         start_frame = get_start_frame(keyframe_ms, window_size_ms, sample_rate)
         end_frame = get_end_frame(keyframe_ms, window_size_ms, sample_rate)
         logger.info(
