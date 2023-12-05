@@ -7,7 +7,7 @@ from time import time
 from typing import List
 from dane.config import cfg
 from dane.provenance import Provenance
-
+from matplotlib import pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,7 @@ def raw_audio_to_spectograms(
     sample_rate,
     window_size_ms: int = 1000,
     z_normalize: bool = True,
+    generate_image: bool = True
 ):
     for keyframe in keyframe_timestamps:
         if (
@@ -80,11 +81,15 @@ def raw_audio_to_spectograms(
         )
         fns = []
         spectogram = get_spec(
-            raw_audio[from_frame:to_frame], sample_rate, z_normalize=z_normalize
-        )
+            raw_audio[from_frame:to_frame], sample_rate)
         logger.info(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
         )
+        if generate_image:
+            image_path = os.path.join(location, f"{keyframe}_{sample_rate}.jpg")
+            generate_spec_image(spectogram=spectogram, destination=image_path)
+        if z_normalize:
+            spectogram = (spectogram - 1.93) / 17.89
         spec_path = os.path.join(location, f"{keyframe}_{sample_rate}.npz")
         out_dict = {"audio": spectogram}
         np.savez(spec_path, out_dict)  # type: ignore
@@ -92,7 +97,7 @@ def raw_audio_to_spectograms(
     return fns
 
 
-def get_spec(wav_bit: np.ndarray, sample_rate: int, z_normalize: bool):
+def get_spec(wav_bit: np.ndarray, sample_rate: int):
     spec = logfbank(
         wav_bit, sample_rate, winlen=0.02, winstep=0.01, nfilt=257, nfft=1024
     )
@@ -100,11 +105,20 @@ def get_spec(wav_bit: np.ndarray, sample_rate: int, z_normalize: bool):
     spec = spec.astype("float32")
     spec = spec.T
     spec = np.expand_dims(spec, axis=0)
-    if z_normalize:
-        spec = (spec - 1.93) / 17.89
+    
     # spec = torch.as_tensor(spec) This will be done in the second worker
     # (so that we don't require torch in this one)
     return spec
+
+
+def generate_spec_image(spectogram, destination):
+    fft = np.abs(spectogram)
+    fft[fft == 0] = 0.0000000000001 # prevent zero division
+    fig = plt.figure(figsize=(64,64), dpi=10)
+    ax = fig.add_subplot()
+    ax.imshow(fft.squeeze(), norm='log',aspect='auto')
+    plt.savefig(destination)
+    plt.close()
 
 
 def extract_audio_spectograms(
