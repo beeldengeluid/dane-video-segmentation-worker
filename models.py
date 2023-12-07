@@ -20,6 +20,17 @@ class HecateOutput(Enum):
     SHOT_BOUNDARIES = "shot_boundaries_timestamps_ms.txt"
 
 
+class ScenedetectOutput(Enum):
+    KEYFRAME_METADATA_CSV = "keyframes_metadata.csv"
+
+
+@dataclass
+class MediaFile:
+    file_path: str  # file location
+    duration_ms: int  # duration is needed to determine edge-cases
+    source_id: str  # serves as a unique processing ID
+
+
 # returned by callback()
 class CallbackResponse(TypedDict):
     state: int
@@ -39,4 +50,5 @@ class DownloadResult:
 class VisXPFeatureExtractionInput:
     state: int
     message: str
-    provenance_chain: Optional[List[Provenance]]
+    media_file: Optional[MediaFile] = None
+    provenance_chain: Optional[List[Provenance]] = None

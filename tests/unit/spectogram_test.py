@@ -65,7 +65,7 @@ def test_extract_audio_spectograms(
     extract_audio_spectograms(
         media_file=media_file,
         keyframe_timestamps=keyframe_timestamps,
-        location=tmp_location,
+        output_dir=tmp_location,
         tmp_location=tmp_location,
         sample_rate=sample_rate,
     )
