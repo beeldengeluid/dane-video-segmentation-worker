@@ -183,10 +183,9 @@ def generate_input_for_feature_extraction(
             )
 
         spectogram_provenance = spectogram.run(
-            input_file_path,
-            keyframe_timestamps,  # TODO check if this matches the actual keyframe timestamps
-            output_dirs[OutputType.SPECTOGRAMS.value],
-            output_dirs[OutputType.TMP.value],
+            input_file_path=input_file_path,
+            keyframe_timestamps=keyframe_timestamps,  # TODO check if this matches the actual keyframe timestamps
+            output_dirs=output_dirs
         )
 
     return VisXPFeatureExtractionInput(
