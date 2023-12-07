@@ -7,6 +7,11 @@ from time import time
 from typing import List
 from dane.config import cfg
 from dane.provenance import Provenance
+from media_file_util import (
+    get_start_frame,
+    get_end_frame,
+    get_media_file_length,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -26,7 +31,7 @@ def run(
         sf = extract_audio_spectograms(
             media_file=input_file_path,
             keyframe_timestamps=keyframe_timestamps,
-            location=output_dir,
+            output_dir=output_dir,
             tmp_location=tmp_dir,
             sample_rate=sample_rate,
             window_size_ms=cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
@@ -58,34 +63,36 @@ def get_raw_audio(media_file: str, sample_rate: int):
     return raw_audio
 
 
+"""
+visxp  | 2023-12-04 15:06:11,636|INFO|8|spectogram|raw_audio_to_spectograms|71|104840, len = 2520064
+visxp  | 2023-12-04 15:06:11,636|INFO|8|spectogram|raw_audio_to_spectograms|80|Extracting window at 104840 ms. Frames 2504160 to 2528160.
+visxp  | 2023-12-04 15:06:11,652|INFO|8|spectogram|raw_audio_to_spectograms|86|Spectogram is a np array with dimensions: (1, 257, 66)
+"""
+
+
 def raw_audio_to_spectograms(
     raw_audio: np.ndarray,
+    duration_ms: int,
     keyframe_timestamps: list[int],  # ms timestamps
-    location: str,
+    output_dir: str,
     sample_rate,
     window_size_ms: int = 1000,
     z_normalize: bool = True,
 ):
-    for keyframe in keyframe_timestamps:
-        if (
-            keyframe + window_size_ms / 2 > len(raw_audio)
-            or keyframe < window_size_ms / 2
-        ):
-            logger.info(f"Skipping extraction at {keyframe} ms: too close to the edge.")
-            continue
-        from_frame = (keyframe - window_size_ms // 2) * sample_rate // 1000
-        to_frame = (keyframe + window_size_ms // 2) * sample_rate // 1000
+    fns = []
+    for keyframe_ms in keyframe_timestamps:
+        start_frame = get_start_frame(keyframe_ms, window_size_ms, sample_rate)
+        end_frame = get_end_frame(keyframe_ms, window_size_ms, sample_rate)
         logger.info(
-            f"Extracting window at {keyframe} ms. Frames {from_frame} to {to_frame}."
+            f"Extracting window at {keyframe_ms} ms. Frames {start_frame} to {end_frame}."
         )
-        fns = []
         spectogram = get_spec(
-            raw_audio[from_frame:to_frame], sample_rate, z_normalize=z_normalize
+            raw_audio[start_frame:end_frame], sample_rate, z_normalize=z_normalize
         )
         logger.info(
             f"Spectogram is a np array with dimensions: {np.array(spectogram).shape}"
         )
-        spec_path = os.path.join(location, f"{keyframe}_{sample_rate}.npz")
+        spec_path = os.path.join(output_dir, f"{keyframe_ms}_{sample_rate}.npz")
         out_dict = {"audio": spectogram}
         np.savez(spec_path, out_dict)  # type: ignore
         fns.append(spec_path)
@@ -110,18 +117,20 @@ def get_spec(wav_bit: np.ndarray, sample_rate: int, z_normalize: bool):
 def extract_audio_spectograms(
     media_file: str,
     keyframe_timestamps: list[int],
-    location: str,
+    output_dir: str,
     tmp_location: str,
     sample_rate: int = 48000,
     window_size_ms: int = 1000,
 ):
     logger.info(f"Convert audio to wav at {sample_rate}Hz.")
+    duration_ms = get_media_file_length(media_file)
     raw_audio = get_raw_audio(media_file=media_file, sample_rate=sample_rate)
     logger.info("obtain spectograms")
     fns = raw_audio_to_spectograms(
         raw_audio=raw_audio,
+        duration_ms=duration_ms,
         keyframe_timestamps=keyframe_timestamps,
-        location=location,
+        output_dir=output_dir,
         sample_rate=sample_rate,
         window_size_ms=window_size_ms,
         z_normalize=True,

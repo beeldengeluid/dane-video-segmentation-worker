@@ -9,6 +9,7 @@ from models import HecateOutput
 from time import time
 
 
+# checkout https://www.scenedetect.com/ to replace hecate
 logger = logging.getLogger(__name__)
 
 
