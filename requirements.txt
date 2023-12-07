@@ -7,3 +7,4 @@ numpy >= 1.24.3
 ffmpeg-python >= 0.2.0
 python_speech_features @ git+https://github.com/jameslyons/python_speech_features
 validators >= 0.22.0
+matplotlib >= 3.8.2

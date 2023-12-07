@@ -60,14 +60,16 @@ def test_extract_audio_spectograms(
 ):
     media_file = to_input_file(source_id)
     example_output_path = to_output_dir(source_id)
-
+    locations = {k: tmp_location for k in ["spectograms", "spectogram_images", "audio"]}
     sample_rate = 24000
     extract_audio_spectograms(
         media_file=media_file,
         keyframe_timestamps=keyframe_timestamps,
-        output_dir=tmp_location,
-        tmp_location=tmp_location,
+        locations=locations,
         sample_rate=sample_rate,
+        window_size_ms=1000,
+        generate_images=False,  # TODO: Write test for this
+        extract_audio=False,  # TODO: Write test for this
     )
     for i, timestamp in enumerate(keyframe_timestamps):
         # Load example spectogram (following https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py)

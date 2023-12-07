@@ -10,7 +10,8 @@ class OutputType(Enum):
     METADATA = "metadata"  # produced by hecate.py
     PROVENANCE = "provenance"  # produced by provenance.py
     SPECTOGRAMS = "spectograms"  # produced by spectogram.py
-    TMP = "tmp"  # produced by spectogram.py
+    AUDIO = "audio"  # produced by spectogram.py
+    SPECTOGRAM_IMAGES = "spectogram_images"  # produced by spectogram.py
 
 
 # Hecate outputs these files into OutputType.METADATA
