@@ -1,8 +1,7 @@
 version: '3'
 services:
   web:
-    # image: dane-video-segmentation-worker:latest
-    image: scendetect:latest
+    image: dane-video-segmentation-worker:latest
     volumes:
       - ./data:/data
       - ./config:/root/.DANE
