@@ -183,7 +183,7 @@ def run_shell_command(cmd: str) -> bytes:
         )
 
         stdout, stderr = process.communicate()
-        logger.info(stdout)
+        logger.debug(stdout)
         logger.error(stderr)
         logger.info("Process is done: return stdout")
         return stdout

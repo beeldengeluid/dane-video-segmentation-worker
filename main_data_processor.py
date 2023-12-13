@@ -154,6 +154,9 @@ def generate_input_for_feature_extraction(
         media_file.duration_ms,
         cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
     )
+    logger.info(keyframe_timestamps)
+
+    logger.info(keyframe_indices)
 
     # NOTE this step can be skipped with scenedetect
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:

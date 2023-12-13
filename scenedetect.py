@@ -126,13 +126,26 @@ def save_keyframe_indices_file(
     return True
 
 
+def calc_mid_keyframe_timestamp(start_sec: float, duration_sec: float) -> int:
+    s = int(start_sec * 1000)
+    ms_to_middle = int(duration_sec * 1000 / 2)
+    return s + ms_to_middle
+
+
+def calc_mid_keyframe_index(start_frame: int, duration_frames: int) -> int:
+    frames_to_middle = int(
+        duration_frames / 2
+    )  # ms from start to get to middle of scene
+    return start_frame + frames_to_middle  # -1 on frame?
+
+
 # extracts the keyframe timestamps from the generated CSV file
 def get_keyframe_timestamps(
     output_dir: str, duration_ms: int, window_size_ms: int = 1000
 ) -> List[int]:
     logger.info("Extracting keyframe timestamps")
     return [
-        int(float(row[3]) * 1000)
+        calc_mid_keyframe_timestamp(float(row[3]), float(row[9]))
         for row in load_csv_data(output_dir)
         if not too_close_to_edge(int(float(row[3]) * 1000), duration_ms, window_size_ms)
     ]
@@ -145,7 +158,7 @@ def get_keyframe_indices(
     logger.info("Extracting keyframe indices")
     # filter out the first frame also subtract 1 frame somehow
     return [
-        int(row[1]) - 1
+        calc_mid_keyframe_index(int(row[1]), int(row[7]))
         for row in load_csv_data(output_dir)
         if not too_close_to_edge(int(float(row[3]) * 1000), duration_ms, window_size_ms)
     ]
