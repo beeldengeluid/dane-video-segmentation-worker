@@ -9,13 +9,16 @@ class OutputType(Enum):
     KEYFRAMES = "keyframes"  # produced by keyframe_extraction.py
     METADATA = "metadata" # produced by scenedetect.py
     PROVENANCE = "provenance"  # produced by provenance.py
-    SPECTOGRAMS = "spectograms"  # produced by spectogram.py
-    AUDIO = "audio"  # produced by spectogram.py
-    SPECTOGRAM_IMAGES = "spectogram_images"  # produced by spectogram.py
+    SPECTROGRAMS = "spectrograms"  # produced by spectrogram.py
+    AUDIO = "audio"  # produced by spectrogram.py
+    SPECTROGRAM_IMAGES = "spectrogram_images"  # produced by spectrogram.py
 
 
 class ScenedetectOutput(Enum):
     KEYFRAME_METADATA_CSV = "keyframes_metadata.csv"
+    KEYFRAME_INDICES = "keyframes_indices.txt"
+    KEYFRAMES_TIMESTAMPS = "keyframes_timestamps_ms.txt"
+    SHOT_BOUNDARIES = "shot_boundaries_timestamps_ms.txt"
 
 
 @dataclass

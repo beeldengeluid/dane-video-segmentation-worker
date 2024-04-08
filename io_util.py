@@ -19,9 +19,9 @@ DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
 OUTPUT_FILE_BASE_NAME = "visxp_prep"
 S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.KEYFRAMES,
-    OutputType.SPECTOGRAMS,
+    OutputType.SPECTROGRAMS,
     OutputType.PROVENANCE,
-    OutputType.SPECTOGRAM_IMAGES,
+    OutputType.SPECTROGRAM_IMAGES,
     OutputType.AUDIO,
 ]  # only upload this output to S3
 

@@ -54,10 +54,10 @@ def run(
 
     # create the top-level provenance
     top_level_provenance = generate_initial_provenance(
-        name="Generate input data for VisXP feature extraction",
+        name="VisXP-preparation",
         description=(
-            "Detect shots and keyframes, "
-            "extract keyframes and corresponding audio spectrograms"
+            "Generate input data for VisXP feature extraction: detect shots and keyframes, "
+            "optionally extract keyframes and/or corresponding audio spectrograms"
         ),
         input_data={"input_file_path": input_file_path},  # TODO S3 URI!
         parameters=dict(cfg.VISXP_PREP),
@@ -130,10 +130,26 @@ def generate_input_for_feature_extraction(
     spectrogram_provenance = None
 
     # scenedetect generates (keyframe) metadata and keyframes
-    scenedetect_provenance = scenedetect.run(
+    try:
+        scenedetect_provenance = scenedetect.run(
+            media_file,
+            get_base_output_dir(media_file.source_id),
+            cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
+        )
+    except scenedetect.ScenedetectFailureException:
+        return VisXPFeatureExtractionInput(
+        500,
+        "VisXP prep has failed.",
         media_file,
-        get_base_output_dir(media_file.source_id),
-        cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
+        [
+            p
+            for p in [
+                scenedetect_provenance,
+                spectrogram_provenance,
+                keyframe_provenance,
+            ]
+            if p is not None
+        ],
     )
 
     keyframe_indices = scenedetect.get_keyframe_indices(
