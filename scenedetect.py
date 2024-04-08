@@ -6,7 +6,7 @@ from typing import Generator, List, Tuple
 from dane.provenance import Provenance, obtain_software_versions
 from base_util import run_shell_command
 from media_file_util import too_close_to_edge
-from models import OutputType, ScenedetectOutput, HecateOutput, MediaFile
+from models import OutputType, ScenedetectOutput, MediaFile
 
 # TODO write some code
 

@@ -2,15 +2,13 @@
 
 # dane-video-segmentation-worker
 
-Running hecate to detect shots and keyframes.
+Running Scenedetect to detect shots and select keyframes.
 Including code for extracting keyframes,  extracting audio, and generating spectrograms.
 
 
 ## Installation
 
-First, install Hecate following the instructions in https://github.com/yahoo/hecate.
-
-Then:
+Use Poetry to install this project into a virtualenv.
 
 ```sh
 poetry install
@@ -61,8 +59,6 @@ This is ideal for testing:
 - main_data_processor.py, which uses `VISXP_PREP.TEST_INPUT_FILE` (see config.yml) to produce this worker's output
 - I/O steps taken after the output is generated, i.e. deletion of input/output and transfer of output to S3
 
-Make sure to build the image locally, the first time this takes about 45 minutes (opencv and hecate take forever), after that it'll be very fast if you only change a some Python code. Here's the command:
-
 ```sh
 docker build -t dane-video-segmentation-worker .
 ```
@@ -110,7 +106,6 @@ PATHS:
     TEMP_FOLDER: /data/input-files
     OUT_FOLDER: /data/output-files
 VISXP_PREP:
-    RUN_HECATE: true
     RUN_KEYFRAME_EXTRACTION: true
     RUN_AUDIO_EXTRACTION: true
     SPECTOGRAM_WINDOW_SIZE_MS: 1000

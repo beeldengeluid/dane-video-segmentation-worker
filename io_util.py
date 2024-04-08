@@ -21,7 +21,6 @@ S3_OUTPUT_TYPES: List[OutputType] = [
     OutputType.KEYFRAMES,
     OutputType.SPECTOGRAMS,
     OutputType.PROVENANCE,
-    OutputType.METADATA,
     OutputType.SPECTOGRAM_IMAGES,
     OutputType.AUDIO,
 ]  # only upload this output to S3

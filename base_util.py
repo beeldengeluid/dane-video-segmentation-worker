@@ -67,9 +67,6 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
         # Settings for this DANE worker
         assert config.VISXP_PREP, "VISXP_PREP sub-config missing"
         assert check_setting(
-            config.VISXP_PREP.RUN_HECATE, bool
-        ), "VISXP_PREP.RUN_HECATE"
-        assert check_setting(
             config.VISXP_PREP.RUN_KEYFRAME_EXTRACTION, bool
         ), "VISXP_PREP.RUN_KEYFRAME_EXTRACTION"
         assert check_setting(
@@ -169,8 +166,7 @@ def __validate_parent_dirs(paths: list) -> None:
     except AssertionError as e:
         raise (e)
 
-
-# used for hecate
+    
 def run_shell_command(cmd: str) -> bytes:
     """Run cmd and return stdout"""
     logger.info(cmd)
@@ -193,7 +189,7 @@ def run_shell_command(cmd: str) -> bytes:
         raise Exception  # TODO use appropriate exception
     except Exception:
         logger.exception("Exception")
-        raise Exception  # TODO use appropriate exception
+        raise Exception  # TODO use appropriate exception    
 
 
 def hash_string(s: str) -> str:
