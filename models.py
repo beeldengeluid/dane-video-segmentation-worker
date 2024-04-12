@@ -7,7 +7,7 @@ from typing import List, Optional, TypedDict
 # These are the types of output this worker (possibly) provides (depending on configuration)
 class OutputType(Enum):
     KEYFRAMES = "keyframes"  # produced by keyframe_extraction.py
-    METADATA = "metadata" # produced by scenedetect.py
+    METADATA = "metadata"  # produced by scenedetect.py
     PROVENANCE = "provenance"  # produced by provenance.py
     SPECTROGRAMS = "spectrograms"  # produced by spectrogram.py
     AUDIO = "audio"  # produced by spectrogram.py
