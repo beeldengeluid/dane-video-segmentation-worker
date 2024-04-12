@@ -60,7 +60,9 @@ def test_extract_audio_spectrograms(
 ):
     media_file = to_input_file(source_id)
     example_output_path = to_output_dir(source_id)
-    locations = {k: tmp_location for k in ["spectrograms", "spectrogram_images", "audio"]}
+    locations = {
+        k: tmp_location for k in ["spectrograms", "spectrogram_images", "audio"]
+    }
     sample_rate = 24000
     extract_audio_spectrograms(
         media_file=media_file,
