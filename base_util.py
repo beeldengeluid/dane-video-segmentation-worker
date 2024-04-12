@@ -166,7 +166,7 @@ def __validate_parent_dirs(paths: list) -> None:
     except AssertionError as e:
         raise (e)
 
-    
+
 def run_shell_command(cmd: str) -> bytes:
     """Run cmd and return stdout"""
     logger.info(cmd)
@@ -184,17 +184,17 @@ def run_shell_command(cmd: str) -> bytes:
         logger.error(stderr)
         logger.info("Process is done: return stdout")
         return stdout
-    
+
     except AssertionError:
         logger.error("Subprocess call was not successful. Abort.")
-        raise 
+        raise
 
     except subprocess.CalledProcessError:
         logger.exception("CalledProcessError")
         raise Exception  # TODO use appropriate exception
     except Exception:
         logger.exception("Exception")
-        raise Exception  # TODO use appropriate exception    
+        raise Exception  # TODO use appropriate exception
 
 
 def hash_string(s: str) -> str:

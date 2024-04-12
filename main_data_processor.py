@@ -138,19 +138,19 @@ def generate_input_for_feature_extraction(
         )
     except scenedetect.ScenedetectFailureException:
         return VisXPFeatureExtractionInput(
-        500,
-        "VisXP prep has failed.",
-        media_file,
-        [
-            p
-            for p in [
-                scenedetect_provenance,
-                spectrogram_provenance,
-                keyframe_provenance,
-            ]
-            if p is not None
-        ],
-    )
+            500,
+            "VisXP prep has failed.",
+            media_file,
+            [
+                p
+                for p in [
+                    scenedetect_provenance,
+                    spectrogram_provenance,
+                    keyframe_provenance,
+                ]
+                if p is not None
+            ],
+        )
 
     keyframe_indices = scenedetect.get_keyframe_indices(
         get_base_output_dir(media_file.source_id),

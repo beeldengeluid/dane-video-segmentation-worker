@@ -75,14 +75,15 @@ def run(
                 keyframe_dir,
             ]
         )
-    try: 
+    try:
         result = run_shell_command(" ".join(cmd))
     except Exception as e:
         result = None
     if not result:
-        logger.error(f"Failed to run scenedetect on {media_file.file_path}. Is Scenedetect installed?")
+        logger.error(
+            f"Failed to run scenedetect on {media_file.file_path}. Is Scenedetect installed?"
+        )
         raise ScenedetectFailureException()
-
 
     # for backwards compatability, save the HecateOutput.SHOT_BOUNDARIES
     save_shot_boundaries_file(output_dir, media_file.duration_ms, window_size_ms)
