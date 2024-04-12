@@ -77,7 +77,7 @@ def run(
         )
     try:
         result = run_shell_command(" ".join(cmd))
-    except Exception as e:
+    except Exception:
         result = None
     if not result:
         logger.error(
