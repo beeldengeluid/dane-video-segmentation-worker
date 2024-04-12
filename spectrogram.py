@@ -42,7 +42,7 @@ def run(
         for k, v in sf.items():
             spectrogram_files[k].extend(v)
     return Provenance(
-        activity_name="Spectrogram extraction",
+        activity_name="Spectogram extraction",
         activity_description=(
             "Extract audio spectrogram (Numpy array)"
             "corresponding to 1 sec. of audio around each listed keyframe"
@@ -75,7 +75,7 @@ def get_raw_audio(media_file: str, sample_rate: int):
 """
 visxp  | 2023-12-04 15:06:11,636|INFO|8|spectrogram|raw_audio_to_spectrograms|71|104840, len = 2520064
 visxp  | 2023-12-04 15:06:11,636|INFO|8|spectrogram|raw_audio_to_spectrograms|80|Extracting window at 104840 ms. Frames 2504160 to 2528160.
-visxp  | 2023-12-04 15:06:11,652|INFO|8|spectrogram|raw_audio_to_spectrograms|86|Spectrogram is a np array with dimensions: (1, 257, 66)
+visxp  | 2023-12-04 15:06:11,652|INFO|8|spectrogram|raw_audio_to_spectrograms|86|Spectogram is a np array with dimensions: (1, 257, 66)
 """
 
 
@@ -97,7 +97,7 @@ def raw_audio_to_spectrograms(
         )
         spectrogram = get_spec(raw_audio[start_frame:end_frame], sample_rate)
         logger.info(
-            f"Spectrogram is a np array with dimensions: {np.array(spectrogram).shape}"
+            f"Spectogram is a np array with dimensions: {np.array(spectrogram).shape}"
         )
         if generate_image:
             image_path = os.path.join(
