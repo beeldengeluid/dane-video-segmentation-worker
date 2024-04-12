@@ -1,6 +1,6 @@
 import pytest
 import shutil
-from spectogram import extract_audio_spectograms
+from spectrogram import extract_audio_spectrograms
 import os
 from io_util import get_source_id
 import numpy as np
@@ -8,8 +8,8 @@ import numpy as np
 MP4_INPUT_DIR = (
     "./tests/data/mp4s"  # any file in this dir will be subjected to this test
 )
-SPECTOGRAM_OUTPUT_DIR = (
-    "./tests/data/spectograms"  # will be cleaned up after each test run
+SPECTROGRAM_OUTPUT_DIR = (
+    "./tests/data/spectrograms"  # will be cleaned up after each test run
 )
 TMP_OUTPUT_PATH = "/tmp"  # should be available on most systems
 
@@ -24,7 +24,7 @@ def generate_source_ids():
 
 
 def to_output_dir(source_id: str) -> str:
-    return f"{SPECTOGRAM_OUTPUT_DIR}/{source_id}_example_output"
+    return f"{SPECTROGRAM_OUTPUT_DIR}/{source_id}_example_output"
 
 
 def to_input_file(source_id: str) -> str:
@@ -55,14 +55,14 @@ def cleanup_output(source_id: str):
         for source_id in generate_source_ids()
     ],
 )
-def test_extract_audio_spectograms(
+def test_extract_audio_spectrograms(
     source_id: str, keyframe_timestamps: list, tmp_location: str
 ):
     media_file = to_input_file(source_id)
     example_output_path = to_output_dir(source_id)
-    locations = {k: tmp_location for k in ["spectograms", "spectogram_images", "audio"]}
+    locations = {k: tmp_location for k in ["spectrograms", "spectrogram_images", "audio"]}
     sample_rate = 24000
-    extract_audio_spectograms(
+    extract_audio_spectrograms(
         media_file=media_file,
         keyframe_timestamps=keyframe_timestamps,
         locations=locations,
@@ -72,14 +72,14 @@ def test_extract_audio_spectograms(
         extract_audio=False,  # TODO: Write test for this
     )
     for i, timestamp in enumerate(keyframe_timestamps):
-        # Load example spectogram (following https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py)
+        # Load example spectrogram (following https://github.com/beeldengeluid/dane-visual-feature-extraction-worker/blob/main/example.py)
         example_path = os.path.join(example_output_path, f"{i}.npz")
         example_data = np.load(example_path, allow_pickle=True)
-        example_spectogram = example_data["arr_0"].item()["audio"]
+        example_spectrogram = example_data["arr_0"].item()["audio"]
 
         real_path = os.path.join(tmp_location, f"{timestamp}_{sample_rate}.npz")
         real_data = np.load(real_path, allow_pickle=True)
-        real_spectogram = real_data["arr_0"].item()["audio"]
+        real_spectrogram = real_data["arr_0"].item()["audio"]
 
-        assert np.equal(real_spectogram, example_spectogram).all()
+        assert np.equal(real_spectrogram, example_spectrogram).all()
     # assert cleanup_output(source_id) # Do not clean up!
