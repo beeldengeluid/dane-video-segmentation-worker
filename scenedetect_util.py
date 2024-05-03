@@ -83,7 +83,7 @@ def run(
         activity_name="Python Scenedetect",
         activity_description="Shot detection & keyframe extraction",
         start_time_unix=start_time,
-        processing_time_ms=time() - start_time,
+        processing_time_ms=(time() - start_time) * 1000,
         software_version=obtain_software_versions(["scenedetect"]),
         input_data={"input_file": media_file.file_path},
         output_data=output_data,
@@ -106,7 +106,7 @@ def get_keyframes_timestamps(image_paths):
 
 
 if __name__ == "__main__":
-    media_file = MediaFile(file_path="data/input-files/1411058.1366653.WEEKNUMMER404-HRE000042FF_924200_1089200.mp4", duration_ms=-1, source_id='source_id')
+    media_file = MediaFile(file_path="data/input-files/1411058.1366653.WEEKNUMMER404-HRE000042FF_924200_1089200.mp4", source_id='source_id')
     provenance = run(
         media_file=media_file,
         output_dir='tmp',

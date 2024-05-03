@@ -22,7 +22,6 @@ class ScenedetectOutput(Enum):
 @dataclass
 class MediaFile:
     file_path: str  # file location
-    duration_ms: int  # duration is needed to determine edge-cases
     source_id: str  # serves as a unique processing ID
 
 

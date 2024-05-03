@@ -19,7 +19,7 @@ def validate_media_file(media_file_path: str) -> Optional[MediaFile]:
     if duration_ms <= 0:
         logger.error("Not a valid media file")
         return None
-    return MediaFile(media_file_path, duration_ms, get_source_id(media_file_path))
+    return MediaFile(media_file_path, get_source_id(media_file_path))
 
 
 # returns duration in ms
