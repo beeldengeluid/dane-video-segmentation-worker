@@ -6,11 +6,15 @@ from typing import Generator, List, Tuple
 from dane.provenance import Provenance, obtain_software_versions
 from base_util import run_shell_command
 from media_file_util import too_close_to_edge
-from models import OutputType, ScenedetectOutput, HecateOutput, MediaFile
+from models import OutputType, ScenedetectOutput, MediaFile
 
 # TODO write some code
 
 logger = logging.getLogger(__name__)
+
+
+class ScenedetectFailureException(Exception):
+    pass
 
 
 def _get_csv_file_path(output_dir: str) -> str:
@@ -27,13 +31,13 @@ def _get_keyframe_dir(output_dir: str) -> str:
 
 def _get_shot_boundaries_path(output_dir: str) -> str:
     return os.path.join(
-        output_dir, OutputType.METADATA.value, HecateOutput.SHOT_BOUNDARIES.value
+        output_dir, OutputType.METADATA.value, ScenedetectOutput.SHOT_BOUNDARIES.value
     )
 
 
 def _get_keyframe_indices_path(output_dir: str) -> str:
     return os.path.join(
-        output_dir, OutputType.METADATA.value, HecateOutput.KEYFRAME_INDICES.value
+        output_dir, OutputType.METADATA.value, ScenedetectOutput.KEYFRAME_INDICES.value
     )
 
 
@@ -62,7 +66,7 @@ def run(
         logger.info("Also telling scenedetect to extract keyframes")
         cmd.extend(
             [
-                "save-images",  # TODO make sure to save 1 per scene (or filter out the rest when making spectograms)
+                "save-images",  # TODO make sure to save 1 per scene (or filter out the rest when making spectrograms)
                 "-n",
                 "1",  # just one keyframe per scene/shot
                 "-f",
@@ -71,9 +75,15 @@ def run(
                 keyframe_dir,
             ]
         )
-    result = run_shell_command(" ".join(cmd))
+    try:
+        result = run_shell_command(" ".join(cmd))
+    except Exception:
+        result = None
     if not result:
-        logger.error(f"Failed to run scenedetect on {media_file.file_path}")
+        logger.error(
+            f"Failed to run scenedetect on {media_file.file_path}. Is Scenedetect installed?"
+        )
+        raise ScenedetectFailureException()
 
     # for backwards compatability, save the HecateOutput.SHOT_BOUNDARIES
     save_shot_boundaries_file(output_dir, media_file.duration_ms, window_size_ms)

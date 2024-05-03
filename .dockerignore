@@ -6,7 +6,5 @@ __pycache__
 .flake8
 /config
 /config.yml
-pyproject.toml
-poetry.lock
 /tests
 s3-creds.env

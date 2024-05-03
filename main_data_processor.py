@@ -12,12 +12,10 @@ from dane.provenance import (
 )
 from dane.s3_util import validate_s3_uri
 
-# import hecate
 import keyframe_extraction
 from models import (
     VisXPFeatureExtractionInput,
     OutputType,
-    # HecateOutput,
     CallbackResponse,
 )
 from media_file_util import validate_media_file
@@ -32,7 +30,7 @@ from io_util import (
     transfer_output,
     validate_data_dirs,
 )
-import spectogram
+import spectrogram
 import scenedetect
 
 
@@ -56,10 +54,10 @@ def run(
 
     # create the top-level provenance
     top_level_provenance = generate_initial_provenance(
-        name="Generate input data for VisXP feature extraction",
+        name="VisXP-preparation",
         description=(
-            "Detect shots and keyframes, "
-            "extract keyframes and corresponding audio spectograms"
+            "Generate input data for VisXP feature extraction: detect shots and keyframes, "
+            "optionally extract keyframes and/or corresponding audio spectrograms"
         ),
         input_data={"input_file_path": input_file_path},  # TODO S3 URI!
         parameters=dict(cfg.VISXP_PREP),
@@ -127,32 +125,42 @@ def generate_input_for_feature_extraction(
     # Step 1: generate output dir per OutputType
     output_dirs = generate_output_dirs(media_file.source_id)
 
-    # hecate_provenance = None
     keyframe_provenance = None
     scenedetect_provenance = None
-    spectogram_provenance = None
+    spectrogram_provenance = None
 
     # scenedetect generates (keyframe) metadata and keyframes
-    scenedetect_provenance = scenedetect.run(
-        media_file,
-        get_base_output_dir(media_file.source_id),
-        cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
-    )
-
-    # if cfg.VISXP_PREP.RUN_HECATE:
-    #     hecate_provenance = hecate.run(
-    #         input_file_path, output_dirs[OutputType.METADATA.value]
-    #     )
+    try:
+        scenedetect_provenance = scenedetect.run(
+            media_file,
+            get_base_output_dir(media_file.source_id),
+            cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
+        )
+    except scenedetect.ScenedetectFailureException:
+        return VisXPFeatureExtractionInput(
+            500,
+            "VisXP prep has failed.",
+            media_file,
+            [
+                p
+                for p in [
+                    scenedetect_provenance,
+                    spectrogram_provenance,
+                    keyframe_provenance,
+                ]
+                if p is not None
+            ],
+        )
 
     keyframe_indices = scenedetect.get_keyframe_indices(
         get_base_output_dir(media_file.source_id),
         media_file.duration_ms,
-        cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+        cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
     )
     keyframe_timestamps = scenedetect.get_keyframe_timestamps(
         get_base_output_dir(media_file.source_id),
         media_file.duration_ms,
-        cfg.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS,
+        cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
     )
     logger.info(keyframe_timestamps)
 
@@ -160,9 +168,6 @@ def generate_input_for_feature_extraction(
 
     # NOTE this step can be skipped with scenedetect
     if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
-        # keyframe_indices = hecate.get_output(
-        #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAME_INDICES
-        # )
         if not keyframe_indices:
             logger.error("Could not find keyframe_indices")
             return VisXPFeatureExtractionInput(500, "Could not find keyframe_indices")
@@ -176,16 +181,13 @@ def generate_input_for_feature_extraction(
 
     # TODO adapt to work with the output of Scenedetect
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
-        # keyframe_timestamps = hecate.get_output(
-        #     output_dirs[OutputType.METADATA.value], HecateOutput.KEYFRAMES_TIMESTAMPS
-        # )
         if not keyframe_timestamps:
             logger.error("Could not find keyframe_timestamps")
             return VisXPFeatureExtractionInput(
                 500, "Could not find keyframe_timestamps"
             )
 
-        spectogram_provenance = spectogram.run(
+        spectrogram_provenance = spectrogram.run(
             input_file_path=input_file_path,
             keyframe_timestamps=keyframe_timestamps,  # TODO check if this matches the actual keyframe timestamps
             output_dirs=output_dirs,
@@ -199,9 +201,9 @@ def generate_input_for_feature_extraction(
             p
             for p in [
                 scenedetect_provenance,
-                spectogram_provenance,
+                spectrogram_provenance,
                 keyframe_provenance,
-            ]  # hecate_provenance
+            ]
             if p is not None
         ],
     )

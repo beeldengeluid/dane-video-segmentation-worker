@@ -2,7 +2,7 @@
 
 echo "Starting DANE video segmentation worker"
 
-python3.10 worker.py "$@"
+poetry run python worker.py "$@"
 
 echo The worker crashed, tailing /dev/null for debugging
 

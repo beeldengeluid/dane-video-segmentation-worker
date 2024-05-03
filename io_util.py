@@ -17,14 +17,16 @@ from models import OutputType, DownloadResult
 logger = logging.getLogger(__name__)
 DANE_DOWNLOAD_TASK_KEY = "DOWNLOAD"
 OUTPUT_FILE_BASE_NAME = "visxp_prep"
-S3_OUTPUT_TYPES: List[OutputType] = [
-    OutputType.KEYFRAMES,
-    OutputType.SPECTOGRAMS,
-    OutputType.PROVENANCE,
-    OutputType.METADATA,
-    OutputType.SPECTOGRAM_IMAGES,
-    OutputType.AUDIO,
-]  # only upload this output to S3
+S3_OUTPUT_TYPES: List[OutputType] = [OutputType.PROVENANCE, OutputType.METADATA]
+# only upload this output to S3
+if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
+    S3_OUTPUT_TYPES.append(OutputType.KEYFRAMES)
+if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
+    S3_OUTPUT_TYPES.append(OutputType.SPECTROGRAMS)
+if cfg.VISXP_PREP.GENERATE_SPECTROGRAM_IMAGES:
+    S3_OUTPUT_TYPES.append(OutputType.SPECTROGRAM_IMAGES)
+if cfg.VISXP_PREP.EXTRACT_AUDIO_SAMPLES:
+    S3_OUTPUT_TYPES.append(OutputType.AUDIO)
 
 
 # make sure the necessary base dirs are there
@@ -105,7 +107,11 @@ def get_s3_output_file_uri(source_id: str) -> str:
 def generate_output_dirs(source_id: str) -> Dict[str, str]:
     base_output_dir = get_base_output_dir(source_id)
     output_dirs = {}
+    logger.info(f"Creating output dirs for {S3_OUTPUT_TYPES}")
     for output_type in OutputType:
+        if output_type not in S3_OUTPUT_TYPES:
+            # Only create it if you will, in the end, upload it too (experimental)
+            continue
         output_dir = os.path.join(base_output_dir, output_type.value)
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)

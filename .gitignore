@@ -7,7 +7,8 @@ __pycache__
 .coverage
 /tests/data/mp4s/*
 !/tests/data/mp4s/test.mp4
-!/tests/data/spectograms/*
-!/tests/data/spectograms/README.md
+!/tests/data/spectrograms/*
+!/tests/data/spectrograms/README.md
 /config.yml
 s3-creds.env
+.vscode

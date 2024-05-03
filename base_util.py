@@ -67,20 +67,17 @@ def validate_config(config: CfgNode, validate_file_paths: bool = True) -> bool:
         # Settings for this DANE worker
         assert config.VISXP_PREP, "VISXP_PREP sub-config missing"
         assert check_setting(
-            config.VISXP_PREP.RUN_HECATE, bool
-        ), "VISXP_PREP.RUN_HECATE"
-        assert check_setting(
             config.VISXP_PREP.RUN_KEYFRAME_EXTRACTION, bool
         ), "VISXP_PREP.RUN_KEYFRAME_EXTRACTION"
         assert check_setting(
             config.VISXP_PREP.RUN_AUDIO_EXTRACTION, bool
         ), "VISXP_PREP.RUN_AUDIO_EXTRACTION"
         assert check_setting(
-            config.VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS, int
-        ), "VISXP_PREP.SPECTOGRAM_WINDOW_SIZE_MS"
+            config.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS, int
+        ), "VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS"
         assert check_setting(
-            config.VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ, list
-        ), "VISXP_PREP.SPECTOGRAM_SAMPLERATE_HZ"
+            config.VISXP_PREP.SPECTROGRAM_SAMPLERATE_HZ, list
+        ), "VISXP_PREP.SPECTROGRAM_SAMPLERATE_HZ"
         assert check_setting(
             config.VISXP_PREP.TEST_INPUT_FILE, str, True
         ), "VISXP_PREP.TEST_INPUT_FILE"
@@ -170,7 +167,6 @@ def __validate_parent_dirs(paths: list) -> None:
         raise (e)
 
 
-# used for hecate
 def run_shell_command(cmd: str) -> bytes:
     """Run cmd and return stdout"""
     logger.info(cmd)
@@ -183,10 +179,15 @@ def run_shell_command(cmd: str) -> bytes:
         )
 
         stdout, stderr = process.communicate()
+        assert process.returncode == 0
         logger.debug(stdout)
         logger.error(stderr)
         logger.info("Process is done: return stdout")
         return stdout
+
+    except AssertionError:
+        logger.error("Subprocess call was not successful. Abort.")
+        raise
 
     except subprocess.CalledProcessError:
         logger.exception("CalledProcessError")
