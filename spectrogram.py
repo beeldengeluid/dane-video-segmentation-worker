@@ -49,7 +49,7 @@ def run(
             "Optionally, also extract the audio to mp3 and generate spectrogram image"
         ),
         start_time_unix=start_time,
-        processing_time_ms=time() - start_time,
+        processing_time_ms=(time() - start_time) * 1000,
         input_data={
             "input_file_path": input_file_path,
             "keyframe_timestamps": str(keyframe_timestamps),
