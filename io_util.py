@@ -315,12 +315,12 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
 
 
 def to_download_provenance(
-    download_result: DownloadResult, input_file_path: str
+    download_result: DownloadResult, input_file_path: str, start_time: time
 ) -> Provenance:
     return Provenance(
         activity_name="Download VisXP input",
         activity_description="Download source AV media",
-        start_time_unix=-1,  # TODO not supplied yet by download worker
+        start_time_unix=start_time,  # TODO not supplied yet by download worker
         processing_time_ms=download_result.download_time,  # TODO not supllied yet by download worker
         input_data={"input_file_path": input_file_path},
         output_data={"file_path": download_result.file_path},
