@@ -279,7 +279,7 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
 
 
 def to_download_provenance(
-    download_result: DownloadResult, input_file_path: str, start_time: time
+    download_result: DownloadResult, input_file_path: str, start_time: float
 ) -> Provenance:
     return Provenance(
         activity_name="Download VisXP input",
