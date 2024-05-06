@@ -67,23 +67,12 @@ class VideoSegmentationWorker(base_worker):
         logger.info(task)
         logger.info(doc)
 
-        # first check if there is a download worker result & determine the input file
-        download_provenance = (
-            get_dane_download_worker_provenance(self.handler, doc)
-            if self.__depends_on
-            else None
-        )
-        input_file_path = (
-            download_provenance.output_data.get("file_path")
-            if download_provenance
-            else doc.target.get("url")
-        )
-
+        input_file_path = doc.target.get("url")
         logger.info(f"Input file path is: {input_file_path} ")
 
         # now run the main process!
         processing_result, full_provenance_chain = main_data_processor.run(
-            input_file_path, download_provenance
+            input_file_path
         )
 
         # if results are fine, save something to the DANE index
