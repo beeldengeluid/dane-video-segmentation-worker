@@ -7,7 +7,7 @@ from time import time
 from typing import List
 from dane.config import cfg
 from dane.provenance import Provenance
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt  # type: ignore
 from collections import defaultdict
 from media_file_util import (
     get_start_frame,
