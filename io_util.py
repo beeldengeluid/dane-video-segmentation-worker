@@ -6,8 +6,6 @@ import shutil
 import time
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
-
-from dane import Document
 from dane.config import cfg
 from dane.provenance import PROVENANCE_FILE, Provenance
 from dane.s3_util import S3Store, parse_s3_uri, validate_s3_uri
