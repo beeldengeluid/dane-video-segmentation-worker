@@ -20,7 +20,8 @@ def _get_keyframe_dir(output_dir: str) -> str:
 def _get_metadata_path(output_dir: str, kind: str) -> str:
     if kind == 'shot_boundaries':
         return os.path.join(
-            output_dir, OutputType.METADATA.value, ScenedetectOutput.SHOT_BOUNDARIES.value
+            output_dir, OutputType.METADATA.value,
+            ScenedetectOutput.SHOT_BOUNDARIES.value
         )
     if kind == 'keyframes':
         return os.path.join(
@@ -29,7 +30,7 @@ def _get_metadata_path(output_dir: str, kind: str) -> str:
             ScenedetectOutput.KEYFRAME_TIMESTAMPS.value,
         )
     else:
-        raise Exception() 
+        raise Exception()
 
 
 def run(
@@ -56,7 +57,8 @@ def run(
     # `get_scene_list` returns a list of start/end timecode pairs
     # for each scene that was found.
     scene_list = video_scene_manager.get_scene_list()  
-    shot_boundaries_path = _get_metadata_path(output_dir=output_dir, kind='shot_boundaries')
+    shot_boundaries_path = _get_metadata_path(
+        output_dir=output_dir, kind='shot_boundaries')
     with open(shot_boundaries_path, "w") as f:
         f.write(str(get_shot_boundaries(scene_list=scene_list)))
     output_data = {"shot_boundaries": shot_boundaries_path}
@@ -106,7 +108,10 @@ def get_keyframes_timestamps(image_paths):
 
 
 if __name__ == "__main__":
-    media_file = MediaFile(file_path="data/input-files/1411058.1366653.WEEKNUMMER404-HRE000042FF_924200_1089200.mp4", source_id='source_id')
+    media_file = MediaFile(
+        file_path=("data/input-files/1411058.1366653.WEEKNUMMER404"
+                   "-HRE000042FF_924200_1089200.mp4"),
+        source_id='source_id')
     provenance = run(
         media_file=media_file,
         output_dir='tmp',
