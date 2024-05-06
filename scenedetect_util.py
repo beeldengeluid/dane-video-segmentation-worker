@@ -3,7 +3,12 @@ import os
 from time import time
 from dane.provenance import Provenance, obtain_software_versions
 from models import OutputType, ScenedetectOutput, MediaFile
-from scenedetect import SceneManager, open_video, ContentDetector, scene_manager
+from scenedetect import (  # type: ignore
+    SceneManager,
+    open_video,
+    ContentDetector,
+    scene_manager,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -18,12 +23,13 @@ def _get_keyframe_dir(output_dir: str) -> str:
 
 
 def _get_metadata_path(output_dir: str, kind: str) -> str:
-    if kind == 'shot_boundaries':
+    if kind == "shot_boundaries":
         return os.path.join(
-            output_dir, OutputType.METADATA.value,
-            ScenedetectOutput.SHOT_BOUNDARIES.value
+            output_dir,
+            OutputType.METADATA.value,
+            ScenedetectOutput.SHOT_BOUNDARIES.value,
         )
-    if kind == 'keyframes':
+    if kind == "keyframes":
         return os.path.join(
             output_dir,
             OutputType.METADATA.value,
@@ -56,9 +62,10 @@ def run(
     video_scene_manager.detect_scenes(video)
     # `get_scene_list` returns a list of start/end timecode pairs
     # for each scene that was found.
-    scene_list = video_scene_manager.get_scene_list()  
+    scene_list = video_scene_manager.get_scene_list()
     shot_boundaries_path = _get_metadata_path(
-        output_dir=output_dir, kind='shot_boundaries')
+        output_dir=output_dir, kind="shot_boundaries"
+    )
     with open(shot_boundaries_path, "w") as f:
         f.write(str(get_shot_boundaries(scene_list=scene_list)))
     output_data = {"shot_boundaries": shot_boundaries_path}
@@ -76,7 +83,7 @@ def run(
             image_name_template="$TIMESTAMP_MS",
         )
         output_data["keyframe_dir"] = keyframe_dir
-        keyframes_path = _get_metadata_path(output_dir=output_dir, kind='keyframes')
+        keyframes_path = _get_metadata_path(output_dir=output_dir, kind="keyframes")
         with open(keyframes_path, "w") as f:
             f.write(str(get_keyframes_timestamps(image_paths)))
         output_data["keyframe_timestamps"] = keyframes_path
@@ -101,7 +108,7 @@ def get_shot_boundaries(scene_list):
 
 def get_keyframes_timestamps(image_paths):
     return [
-        int(filename.split('.')[0])
+        int(os.path.basename(filename).split(".")[0])
         for v in image_paths.values()
         for filename in v
     ]
@@ -109,11 +116,14 @@ def get_keyframes_timestamps(image_paths):
 
 if __name__ == "__main__":
     media_file = MediaFile(
-        file_path=("data/input-files/1411058.1366653.WEEKNUMMER404"
-                   "-HRE000042FF_924200_1089200.mp4"),
-        source_id='source_id')
+        file_path=(
+            "data/input-files/1411058.1366653.WEEKNUMMER404"
+            "-HRE000042FF_924200_1089200.mp4"
+        ),
+        source_id="source_id",
+    )
     provenance = run(
         media_file=media_file,
-        output_dir='tmp',
+        output_dir="tmp",
         extract_keyframes=True,
     )

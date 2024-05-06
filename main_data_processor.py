@@ -149,11 +149,15 @@ def generate_input_for_feature_extraction(
 
     # TODO: implement this if we want it back
     if cfg.VISXP_PREP.GENERATE_SPECTROGRAM_IMAGES:
-        logger.error("Configured to generate spectrogram images, "
-                     "which is not implemented in the current version.")
+        logger.error(
+            "Configured to generate spectrogram images, "
+            "which is not implemented in the current version."
+        )
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
-        logger.error("Configured to run audio extraction, "
-                     "which is not implemented in the current version.")
+        logger.error(
+            "Configured to run audio extraction, "
+            "which is not implemented in the current version."
+        )
 
     return VisXPFeatureExtractionInput(
         200,
