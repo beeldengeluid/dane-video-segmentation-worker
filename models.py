@@ -15,16 +15,13 @@ class OutputType(Enum):
 
 
 class ScenedetectOutput(Enum):
-    KEYFRAME_METADATA_CSV = "keyframes_metadata.csv"
-    KEYFRAME_INDICES = "keyframes_indices.txt"
-    KEYFRAMES_TIMESTAMPS = "keyframes_timestamps_ms.txt"
+    KEYFRAME_TIMESTAMPS = "keyframes_timestamps_ms.txt"
     SHOT_BOUNDARIES = "shot_boundaries_timestamps_ms.txt"
 
 
 @dataclass
 class MediaFile:
     file_path: str  # file location
-    duration_ms: int  # duration is needed to determine edge-cases
     source_id: str  # serves as a unique processing ID
 
 

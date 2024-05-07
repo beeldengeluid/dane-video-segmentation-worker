@@ -2,6 +2,7 @@ from functools import reduce
 import logging
 from typing import Optional, Tuple
 import validators
+from time import time
 
 from dane.config import cfg
 from dane.provenance import (
@@ -11,11 +12,8 @@ from dane.provenance import (
     stop_timer_and_persist_provenance_chain,
 )
 from dane.s3_util import validate_s3_uri
-
-import keyframe_extraction
 from models import (
     VisXPFeatureExtractionInput,
-    OutputType,
     CallbackResponse,
 )
 from media_file_util import validate_media_file
@@ -30,8 +28,7 @@ from io_util import (
     transfer_output,
     validate_data_dirs,
 )
-import spectrogram
-import scenedetect
+import scenedetect_util
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +65,7 @@ def run(
     # check if the input_file_path was already downloaded or not, if not do so
     if not download_provenance:
         logger.info(f"Analyzing input file: {input_file_path}")
+        start_time = time()
         if validate_s3_uri(input_file_path) or validators.url(input_file_path):
             logger.info("Input is a URI, contuining to download")
             download_result = download_uri(input_file_path)
@@ -78,7 +76,7 @@ def run(
                 }, []
             else:
                 download_provenance = to_download_provenance(
-                    download_result, input_file_path
+                    download_result, input_file_path, start_time=start_time
                 )
                 input_file_path = download_result.file_path if download_result else ""
 
@@ -123,20 +121,19 @@ def generate_input_for_feature_extraction(
         return VisXPFeatureExtractionInput(500, "Invalid or missing media file")
 
     # Step 1: generate output dir per OutputType
-    output_dirs = generate_output_dirs(media_file.source_id)
+    generate_output_dirs(media_file.source_id)
 
-    keyframe_provenance = None
     scenedetect_provenance = None
-    spectrogram_provenance = None
+    # spectrogram_provenance = None TODO: implement if needed
 
     # scenedetect generates (keyframe) metadata and keyframes
     try:
-        scenedetect_provenance = scenedetect.run(
+        scenedetect_provenance = scenedetect_util.run(
             media_file,
             get_base_output_dir(media_file.source_id),
             cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
         )
-    except scenedetect.ScenedetectFailureException:
+    except scenedetect_util.ScenedetectFailureException:
         return VisXPFeatureExtractionInput(
             500,
             "VisXP prep has failed.",
@@ -145,52 +142,21 @@ def generate_input_for_feature_extraction(
                 p
                 for p in [
                     scenedetect_provenance,
-                    spectrogram_provenance,
-                    keyframe_provenance,
                 ]
                 if p is not None
             ],
         )
 
-    keyframe_indices = scenedetect.get_keyframe_indices(
-        get_base_output_dir(media_file.source_id),
-        media_file.duration_ms,
-        cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
-    )
-    keyframe_timestamps = scenedetect.get_keyframe_timestamps(
-        get_base_output_dir(media_file.source_id),
-        media_file.duration_ms,
-        cfg.VISXP_PREP.SPECTROGRAM_WINDOW_SIZE_MS,
-    )
-    logger.info(keyframe_timestamps)
-
-    logger.info(keyframe_indices)
-
-    # NOTE this step can be skipped with scenedetect
-    if cfg.VISXP_PREP.RUN_KEYFRAME_EXTRACTION:
-        if not keyframe_indices:
-            logger.error("Could not find keyframe_indices")
-            return VisXPFeatureExtractionInput(500, "Could not find keyframe_indices")
-
-        keyframe_provenance = keyframe_extraction.run(
-            input_file_path,
-            keyframe_indices,
-            keyframe_timestamps,
-            output_dirs[OutputType.KEYFRAMES.value],
+    # TODO: implement this if we want it back
+    if cfg.VISXP_PREP.GENERATE_SPECTROGRAM_IMAGES:
+        logger.error(
+            "Configured to generate spectrogram images, "
+            "which is not implemented in the current version."
         )
-
-    # TODO adapt to work with the output of Scenedetect
     if cfg.VISXP_PREP.RUN_AUDIO_EXTRACTION:
-        if not keyframe_timestamps:
-            logger.error("Could not find keyframe_timestamps")
-            return VisXPFeatureExtractionInput(
-                500, "Could not find keyframe_timestamps"
-            )
-
-        spectrogram_provenance = spectrogram.run(
-            input_file_path=input_file_path,
-            keyframe_timestamps=keyframe_timestamps,  # TODO check if this matches the actual keyframe timestamps
-            output_dirs=output_dirs,
+        logger.error(
+            "Configured to run audio extraction, "
+            "which is not implemented in the current version."
         )
 
     return VisXPFeatureExtractionInput(
@@ -201,8 +167,7 @@ def generate_input_for_feature_extraction(
             p
             for p in [
                 scenedetect_provenance,
-                spectrogram_provenance,
-                keyframe_provenance,
+                # spectrogram_provenance, TODO: activate when needed
             ]
             if p is not None
         ],

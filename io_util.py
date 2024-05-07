@@ -3,11 +3,9 @@ import os
 from pathlib import Path
 import requests
 import shutil
-from time import time
+import time
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
-
-from dane import Document
 from dane.config import cfg
 from dane.provenance import PROVENANCE_FILE, Provenance
 from dane.s3_util import S3Store, parse_s3_uri, validate_s3_uri
@@ -218,40 +216,6 @@ def delete_input_file(input_file: str, actually_delete: bool) -> bool:
     return True  # return True even if empty dirs were not removed
 
 
-def get_dane_download_worker_provenance(handler, doc: Document) -> Optional[Provenance]:
-    # the input doc MUST have a url
-    if not doc.target or "url" not in doc.target or not doc.target.get("url", None):
-        logger.info("No url found in DANE doc")
-        return None
-
-    dane_input_url = doc.target.get("url")
-
-    # step 1: try to fetch the content via the configured DANE download worker
-    download_result = _fetch_dane_download_result(handler, doc)
-
-    return (
-        to_download_provenance(download_result, dane_input_url)
-        if download_result
-        else None
-    )
-
-
-def _fetch_dane_download_result(handler, doc: Document) -> Optional[DownloadResult]:
-    logger.info("checking download worker output")
-    possibles = handler.searchResult(doc._id, DANE_DOWNLOAD_TASK_KEY)
-    logger.info(possibles)
-    # NOTE now MUST use the latest dane-beng-download-worker or dane-download-worker
-    if len(possibles) > 0 and "file_path" in possibles[0].payload:
-        return DownloadResult(
-            possibles[0].payload.get("file_path"),
-            possibles[0].payload.get("download_time", -1),
-            possibles[0].payload.get("mime_type", "unknown"),
-            possibles[0].payload.get("content_length", -1),
-        )
-    logger.error("No file_path found in download result")
-    return None
-
-
 def download_uri(uri: str) -> Optional[DownloadResult]:
     logger.info(f"Trying to download {uri}")
     if validate_s3_uri(uri):
@@ -270,13 +234,13 @@ def http_download(url: str) -> Optional[DownloadResult]:
     logger.info(f"Saving to file {fn}")
 
     # download if the file is not present (preventing unnecessary downloads)
-    start_time = time()
+    start_time = time.time()
     if not os.path.exists(output_file):
         with open(output_file, "wb") as file:
             response = requests.get(url)
             file.write(response.content)
             file.close()
-    download_time = time() - start_time
+    download_time = time.time() - start_time
     return DownloadResult(
         output_file,  # NOTE or output_file? hmmm
         download_time,  # TODO add mime_type and content_length
@@ -291,7 +255,7 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
         return None
 
     # source_id = get_source_id(s3_uri)
-    start_time = time()
+    start_time = time.time()
     output_folder = get_download_dir()
 
     # TODO download the content into get_download_dir()
@@ -305,7 +269,7 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
     )
     success = s3.download_file(bucket, object_name, output_folder)
     if success:
-        download_time = time() - start_time
+        download_time = time.time() - start_time
         return DownloadResult(
             input_file_path,
             download_time,
@@ -315,12 +279,12 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
 
 
 def to_download_provenance(
-    download_result: DownloadResult, input_file_path: str
+    download_result: DownloadResult, input_file_path: str, start_time: float
 ) -> Provenance:
     return Provenance(
         activity_name="Download VisXP input",
         activity_description="Download source AV media",
-        start_time_unix=-1,  # TODO not supplied yet by download worker
+        start_time_unix=start_time,  # TODO not supplied yet by download worker
         processing_time_ms=download_result.download_time,  # TODO not supllied yet by download worker
         input_data={"input_file_path": input_file_path},
         output_data={"file_path": download_result.file_path},
