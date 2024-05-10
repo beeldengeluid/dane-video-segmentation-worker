@@ -240,7 +240,7 @@ def http_download(url: str) -> Optional[DownloadResult]:
             response = requests.get(url)
             file.write(response.content)
             file.close()
-    download_time = time.time() - start_time
+    download_time = (time.time() - start_time) * 1000  # time in ms
     return DownloadResult(
         output_file,  # NOTE or output_file? hmmm
         download_time,  # TODO add mime_type and content_length
@@ -279,13 +279,17 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
 
 
 def to_download_provenance(
-    download_result: DownloadResult, input_file_path: str, start_time: float
+    download_result: DownloadResult,
+    input_file_path: str,
+    start_time: float,
+    software_version: str,
 ) -> Provenance:
     return Provenance(
         activity_name="Download VisXP input",
         activity_description="Download source AV media",
-        start_time_unix=start_time,  # TODO not supplied yet by download worker
-        processing_time_ms=download_result.download_time,  # TODO not supllied yet by download worker
+        start_time_unix=start_time,
+        processing_time_ms=download_result.download_time,
+        software_version=software_version,
         input_data={"input_file_path": input_file_path},
         output_data={"file_path": download_result.file_path},
     )

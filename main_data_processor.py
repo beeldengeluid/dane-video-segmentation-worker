@@ -57,6 +57,7 @@ def run(
             "optionally extract keyframes and/or corresponding audio spectrograms"
         ),
         input_data={"input_file_path": input_file_path},  # TODO S3 URI!
+        start_time=time(),
         parameters=dict(cfg.VISXP_PREP),
         software_version=obtain_software_versions(DANE_WORKER_ID),
     )
@@ -76,7 +77,10 @@ def run(
                 }, []
             else:
                 download_provenance = to_download_provenance(
-                    download_result, input_file_path, start_time=start_time
+                    download_result,
+                    input_file_path,
+                    start_time=start_time,
+                    software_version=top_level_provenance.software_version,
                 )
                 input_file_path = download_result.file_path if download_result else ""
 
