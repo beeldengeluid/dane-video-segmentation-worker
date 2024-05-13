@@ -48,17 +48,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.34.98"
+version = "1.34.103"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.98-py3-none-any.whl", hash = "sha256:030e43b8efe22b4cf10b9f3ef9e30cd4cf9ef9784b26efe9a4583339f2b2bcec"},
-    {file = "boto3-1.34.98.tar.gz", hash = "sha256:28c10956033fa79e64529f48c3b62db86d5e4b77024a7343764b6bde6b553543"},
+    {file = "boto3-1.34.103-py3-none-any.whl", hash = "sha256:59b6499f1bb423dd99de6566a20d0a7cf1a5476824be3a792290fd86600e8365"},
+    {file = "boto3-1.34.103.tar.gz", hash = "sha256:58d097241f3895c4a4c80c9e606689c6e06d77f55f9f53a4cc02dee7e03938b9"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.98,<1.35.0"
+botocore = ">=1.34.103,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -67,13 +67,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.98"
+version = "1.34.103"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.98-py3-none-any.whl", hash = "sha256:631c0031d8ce922b5752ab395ead896a0281b0dc74745a754d0351a27c5d83de"},
-    {file = "botocore-1.34.98.tar.gz", hash = "sha256:4cee65df02f4b0be08ad1401965cc89efafebc50ef0727d2d17083c7f1ed2831"},
+    {file = "botocore-1.34.103-py3-none-any.whl", hash = "sha256:0330d139f18f78d38127e65361859e24ebd6a8bcba184f903c01bb999a3fa431"},
+    {file = "botocore-1.34.103.tar.gz", hash = "sha256:5f07e2c7302c0a9f469dcd08b4ddac152e9f5888b12220242c20056255010939"},
 ]
 
 [package.dependencies]
@@ -288,26 +288,22 @@ toml = ["tomli"]
 
 [[package]]
 name = "dane"
-version = "0.4.2"
+version = "0.4.3"
 description = "Utils for working with the Distributed Annotation and Enrichment system"
 optional = false
-python-versions = "^3.10"
-files = []
-develop = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "dane-0.4.3-py3-none-any.whl", hash = "sha256:dd695608caf43f9b9f943e5d0c4b35f5434f6d84b77d37d231bfc857333d61f6"},
+    {file = "dane-0.4.3.tar.gz", hash = "sha256:f1af481db2e9c69ff69a4b28281ca1512ec5ef7fb15155616993b28666b99f63"},
+]
 
 [package.dependencies]
-boto3 = "^1.26.155"
-elasticsearch7 = "^7.17.7"
-pika = "^1.3.1"
-requests = "^2.28.1"
-urllib3 = "^1.26.12"
-yacs = "^0.1.8"
-
-[package.source]
-type = "git"
-url = "https://github.com/CLARIAH/DANE"
-reference = "ms_fix"
-resolved_reference = "003c813c68a701aecede31771dadbd0312ddb75c"
+boto3 = ">=1.26.155,<2.0.0"
+elasticsearch7 = ">=7.17.7,<8.0.0"
+pika = ">=1.3.1,<2.0.0"
+requests = ">=2.28.1,<3.0.0"
+urllib3 = ">=1.26.12,<2.0.0"
+yacs = ">=0.1.8,<0.2.0"
 
 [[package]]
 name = "elasticsearch7"
@@ -936,4 +932,4 @@ PyYAML = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9b7ac2b95a9f38df4487a5b26aedbe633c9c30732c180bcab03a75ad5dd6332e"
+content-hash = "1cdc4635325379f6cc39e6c51cbc51f671f67bc7c563e9b4bf8986b4e69c7140"
