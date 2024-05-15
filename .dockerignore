@@ -4,6 +4,13 @@
 __pycache__
 .coverage
 .flake8
+# don't ignore entire git as we need provenance info
+# so ignore specific git folders
+.git/objects
+.git/logs
+.git/info
+.git/hooks
+.git/branches
 /config
 /config.yml
 /tests
