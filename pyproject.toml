@@ -12,8 +12,8 @@ pika = "^1.3.2"
 requests = "^2.32.0"
 validators = "^0.22.0"
 dane = "^0.4.3"
-scenedetect = { git = "https://github.com/Veldhoen/PySceneDetect" , tag = "v0.6.4-alpha", extras = ["opencv"]}
-
+scenedetect = { git = "https://github.com/Veldhoen/PySceneDetect",  tag = "v0.6.4-alpha", extras = ["opencv"]}
+opencv-python = "^4.9.0.80"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.5.1"
