@@ -20,16 +20,13 @@ jobs:
       run: "pip install --user poetry"
 
     - name: "Install dev environment"
-      run: poetry install --no-interaction --no-ansi
+      run: poetry install --no-interaction --no-ansi --all-extras
 
     - name: install libgl1
       run: sudo apt-get install -y libgl1
 
     - name: install ffmpeg
       run: sudo apt-get update && sudo apt-get install -y ffmpeg --fix-missing
-
-    - name: install OpenCV
-      run: sudo apt-get install -y python3-opencv
 
     - name: "pytest"
       run: |
