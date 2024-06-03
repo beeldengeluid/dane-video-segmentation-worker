@@ -28,6 +28,9 @@ jobs:
     - name: install ffmpeg
       run: sudo apt-get update && sudo apt-get install -y ffmpeg --fix-missing
 
+    - name: install OpenCV
+      run: sudo apt-get install -y python3-opencv
+
     - name: "pytest"
       run: |
         cp config/config.yml config.yml
