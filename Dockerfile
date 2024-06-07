@@ -10,10 +10,9 @@ RUN pip install poetry==1.5.1
 
 # Create dirs for:
 # - Injecting config.yml: /root/.DANE
-# - Mount point for input & output files: /mnt/dane-fs
 # - Storing the source code: /src
-# - Storing the input file to be used while testing: /src/data
-RUN mkdir /root/.DANE /mnt/dane-fs /src /data
+# - Keeping IO: /data
+RUN mkdir /root/.DANE /src /data
 
 WORKDIR /src
 
@@ -27,7 +26,7 @@ RUN poetry install --no-ansi --without dev --no-root && rm -rf $POETRY_CACHE_DIR
 COPY . /src
 
 # create an objects dir in .git. This remains empty, only needs to be present for git rev to work
-RUN mkdir /src/.git/objects  
+#RUN mkdir /src/.git/objects  
 
 # Write provenance info about software versions to file
 RUN echo "dane-video-segmentation-worker;https://github.com/beeldengeluid/dane-video-segmentation-worker/commit/$(git rev-parse HEAD)" >> /software_provenance.txt
