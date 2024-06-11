@@ -771,12 +771,14 @@ crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
 
 [[package]]
 name = "scenedetect"
-version = "0.7.dev0"
+version = "0.6.4"
 description = "Video scene cut/shot detection program and Python library."
 optional = false
 python-versions = ">=3.7"
-files = []
-develop = false
+files = [
+    {file = "scenedetect-0.6.4-py3-none-any.whl", hash = "sha256:df72648ea9307defbbdb60fc70e720cb683de215c1167558e961ba63b3b6a621"},
+    {file = "scenedetect-0.6.4.tar.gz", hash = "sha256:db281e56cd3f15e520b553d73a5dbb845e7d613a7f4fb94f3078f9af43dd14e0"},
+]
 
 [package.dependencies]
 Click = "*"
@@ -789,12 +791,6 @@ moviepy = ["moviepy"]
 opencv = ["opencv-python"]
 opencv-headless = ["opencv-python-headless"]
 pyav = ["av"]
-
-[package.source]
-type = "git"
-url = "https://github.com/Veldhoen/PySceneDetect"
-reference = "v0.6.4-alpha"
-resolved_reference = "76296453e74b1a2aa1ff94824d0294990a67dbb9"
 
 [[package]]
 name = "six"
@@ -930,4 +926,4 @@ PyYAML = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "106767dfa7302d206195d95bc07da57a55d16f21f51152f39d7bac640c9e27eb"
+content-hash = "c787674a1b462d9fb22646599d03318b7647bef663391efa0512164caaf80c2f"
