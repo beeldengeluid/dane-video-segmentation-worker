@@ -79,12 +79,15 @@ class VideoSegmentationWorker(base_worker):
             logger.info(
                 "applying IO on output went well, now finally saving to DANE index"
             )
-            self.save_to_dane_index(
-                doc,
-                task,
-                get_s3_output_file_uri(get_source_id(input_file_path)),
-                provenance=full_provenance_chain,
-            )
+            try:
+                self.save_to_dane_index(
+                    doc,
+                    task,
+                    get_s3_output_file_uri(get_source_id(input_file_path)),
+                    provenance=full_provenance_chain,
+                )
+            except Exception:
+                logger.exception("Failed to save to DANE index")
         return processing_result
 
     def save_to_dane_index(
