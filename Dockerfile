@@ -5,7 +5,6 @@ RUN apt-get clean && apt-get update -y && apt-get upgrade -y
 RUN apt-get install -y libgl1 ffmpeg
 
 RUN pip install --upgrade pip
-RUN pip install scenedetect[opencv] --upgrade
 RUN pip install poetry==1.5.1
 
 # Create dirs for:
