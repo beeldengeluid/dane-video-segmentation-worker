@@ -86,8 +86,8 @@ class VideoSegmentationWorker(base_worker):
                     get_s3_output_file_uri(get_source_id(input_file_path)),
                     provenance=full_provenance_chain,
                 )
-            except Exception:
-                logger.exception("Failed to save to DANE index")
+            except Exception as e:
+                logger.exception(f"Failed to save to DANE index: {e}")
         return processing_result
 
     def save_to_dane_index(
