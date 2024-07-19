@@ -201,18 +201,6 @@ def delete_input_file(input_file: str, actually_delete: bool) -> bool:
         logger.exception("Could not delete input file")
         return False
 
-    # now remove the "chunked path" from /mnt/dane-fs/input-files/03/d2/8a/03d28a03643a981284b403b91b95f6048576c234/xyz.mp4
-    try:
-        os.chdir(get_download_dir())  # cd /mnt/dane-fs/input-files
-        os.removedirs(
-            f".{input_file[len(get_download_dir()):input_file.rfind(os.sep)]}"
-        )  # /03/d2/8a/03d28a03643a981284b403b91b95f6048576c234
-        logger.info("Deleted empty input dirs too")
-    except OSError:
-        logger.exception("OSError while removing empty input file dirs")
-    except FileNotFoundError:
-        logger.exception("FileNotFoundError while removing empty input file dirs")
-
     return True  # return True even if empty dirs were not removed
 
 
