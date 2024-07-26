@@ -33,6 +33,7 @@ INPUT:
     DELETE_ON_COMPLETION: false  # NOTE: set to True in production environment
 OUTPUT:
     DELETE_ON_COMPLETION: false
+    TAR_OUTPUT: false
     TRANSFER_ON_COMPLETION: false
     S3_ENDPOINT_URL: https://s3-host
     S3_BUCKET: beng-daan-visxp  # bucket reserved for 1 type of output
