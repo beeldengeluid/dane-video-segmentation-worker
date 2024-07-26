@@ -204,7 +204,7 @@ def apply_desired_io_on_output(
     # step 6: transfer the output to S3 (if configured so)
     transfer_success = True
     if transfer_output_on_completion:
-        transfer_success = transfer_output(media_file.source_id)
+        transfer_success = transfer_output(media_file.source_id, as_tar=cfg.OUTPUT.TAR_OUTPUT)
 
     if (
         not transfer_success
