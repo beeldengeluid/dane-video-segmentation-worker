@@ -163,7 +163,7 @@ def _validate_transfer_config() -> bool:
 
 
 # compresses all desired output dirs into a single tar and uploads it to S3
-def transfer_output(source_id: str) -> bool:
+def transfer_output(source_id: str, as_tar=True) -> bool:
     output_dir = get_base_output_dir(source_id)
     logger.info(f"Transferring {output_dir} to S3 (asset={source_id})")
     if not _validate_transfer_config():
@@ -171,7 +171,10 @@ def transfer_output(source_id: str) -> bool:
 
     s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
     file_list = [os.path.join(output_dir, ot.value) for ot in S3_OUTPUT_TYPES]
-    tar_file = os.path.join(output_dir, get_output_file_name(source_id))
+    if as_tar:
+        tar_file = os.path.join(output_dir, get_output_file_name(source_id))
+    else:
+        tar_file = ""
 
     success = s3.transfer_to_s3(
         cfg.OUTPUT.S3_BUCKET,
