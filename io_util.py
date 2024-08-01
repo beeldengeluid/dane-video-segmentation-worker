@@ -87,8 +87,9 @@ def get_base_output_dir(source_id: str = "") -> str:
 
 
 # output file name of the final tar.gz that will be uploaded to S3
-def get_output_file_name(source_id: str) -> str:
-    return f"{OUTPUT_FILE_BASE_NAME}__{source_id}.tar.gz"
+def get_output_file_name(source_id: str, with_tar=True) -> str:
+    postfix = '.tar.gz' if with_tar else ''
+    return f"{OUTPUT_FILE_BASE_NAME}__{source_id}{postfix}"
 
 
 # e.g. s3://<bucket>/assets/<source_id>
@@ -97,8 +98,8 @@ def get_s3_base_uri(source_id: str) -> str:
 
 
 # e.g. s3://<bucket>/assets/<source_id>/visxp_prep__<source_id>.tar.gz
-def get_s3_output_file_uri(source_id: str) -> str:
-    return f"{get_s3_base_uri(source_id)}/{get_output_file_name(source_id)}"
+def get_s3_output_file_uri(source_id: str, with_tar=True) -> str:
+    return f"{get_s3_base_uri(source_id)}/{get_output_file_name(source_id, with_tar=with_tar)}"
 
 
 # for each OutputType a subdir is created inside the base output dir
@@ -163,7 +164,7 @@ def _validate_transfer_config() -> bool:
 
 
 # compresses all desired output dirs into a single tar and uploads it to S3
-def transfer_output(source_id: str, as_tar=True) -> bool:
+def transfer_output(source_id: str, as_tar: bool = True) -> bool:
     output_dir = get_base_output_dir(source_id)
     logger.info(f"Transferring {output_dir} to S3 (asset={source_id})")
     if not _validate_transfer_config():
@@ -175,14 +176,14 @@ def transfer_output(source_id: str, as_tar=True) -> bool:
         tar_file = os.path.join(output_dir, get_output_file_name(source_id))
     else:
         tar_file = ""
-
+    path_elements = [cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id]
+    if not as_tar:
+        path_elements.append(OUTPUT_FILE_BASE_NAME)
     success = s3.transfer_to_s3(
         cfg.OUTPUT.S3_BUCKET,
-        os.path.join(
-            cfg.OUTPUT.S3_FOLDER_IN_BUCKET, source_id
-        ),  # assets/<program ID>__<carrier ID>
-        file_list,  # this list of subdirs will be compressed into the tar below
-        tar_file,  # this file will be uploaded
+        prefix=os.path.join(*path_elements),  # assets/<program ID>__<carrier ID>
+        file_list=file_list,  # this list of files to be uploaded
+        tar_archive_path=tar_file,  # compressed in this archive name, if as_tar
     )
     if not success:
         logger.error(f"Failed to upload: {tar_file}")
