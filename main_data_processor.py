@@ -109,6 +109,7 @@ def run(
             cfg.INPUT.DELETE_ON_COMPLETION,
             cfg.OUTPUT.DELETE_ON_COMPLETION,
             cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+            cfg.OUTPUT.TAR_OUTPUT,
         )
     )
     return validated_output, full_provenance_chain
@@ -184,6 +185,7 @@ def apply_desired_io_on_output(
     delete_input_on_completion: bool,
     delete_output_on_completetion: bool,
     transfer_output_on_completion: bool,
+    tar_before_transfer: bool
 ) -> CallbackResponse:
     media_file = proc_result.media_file
     if not media_file:
@@ -205,7 +207,7 @@ def apply_desired_io_on_output(
     transfer_success = True
     if transfer_output_on_completion:
         transfer_success = transfer_output(
-            media_file.source_id, as_tar=cfg.OUTPUT.TAR_OUTPUT
+            media_file.source_id, as_tar=tar_before_transfer
         )
 
     if (
