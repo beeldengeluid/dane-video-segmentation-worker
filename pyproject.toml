@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "DANE worker providing input for VisXP feature extraction"
 authors = ["Jaap Blom <jblom@beeldengeluid.nl>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -12,7 +13,7 @@ pika = "^1.3.2"
 requests = "^2.32.0"
 validators = "^0.22.0"
 #dane = "^0.4.3"
-dane = {git = "https://github.com/CLARIAH/DANE.git", branch= "23-update-s3_util-to-allow-for-untarred-uploading"}
+dane = {git = "https://github.com/CLARIAH/DANE.git", branch= "23-update-s3_util-to-allow-for-untarred-uploading", rev="77af31a"}
 scenedetect = "~0.6.4"
 opencv-python = "^4.9.0.80"
 
