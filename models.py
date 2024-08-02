@@ -29,6 +29,7 @@ class MediaFile:
 class CallbackResponse(TypedDict):
     state: int
     message: str
+    destination: str
 
 
 # NOTE copied from dane-beng-download-worker (move this to DANE later)
