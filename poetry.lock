@@ -301,8 +301,8 @@ yacs = "^0.1.8"
 [package.source]
 type = "git"
 url = "https://github.com/CLARIAH/DANE.git"
-reference = "77af31a"
-resolved_reference = "77af31ac234c540399df8265091ab48c1f6745a3"
+reference = "5ab71c4"
+resolved_reference = "5ab71c4898effbbbd1a969a570e59958fe39b23f"
 
 [[package]]
 name = "elasticsearch7"
@@ -904,4 +904,4 @@ PyYAML = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "6aa42d2cd0a8fa1eb08d6f1794092ba5466efa14e7a45835f028affba643dc51"
+content-hash = "900ea46eb51eeb987113c50a0208318b9587d0f357a1a703e93afcf2cc44e9a0"
