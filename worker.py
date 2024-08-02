@@ -79,11 +79,12 @@ class VideoSegmentationWorker(base_worker):
             logger.info(
                 "applying IO on output went well, now finally saving to DANE index"
             )
+
             try:
                 self.save_to_dane_index(
                     doc,
                     task,
-                    get_s3_output_file_uri(get_source_id(input_file_path), with_tar=cfg.OUTPUT.TAR_OUTPUT),
+                    processing_result.get("destination", "nowhere"),
                     provenance=full_provenance_chain,
                 )
             except Exception as e:
