@@ -88,7 +88,7 @@ def get_base_output_dir(source_id: str = "") -> str:
 
 # output file name of the final tar.gz that will be uploaded to S3
 def get_output_file_name(source_id: str, with_tar=True) -> str:
-    postfix = '.tar.gz' if with_tar else ''
+    postfix = ".tar.gz" if with_tar else ""
     return f"{OUTPUT_FILE_BASE_NAME}__{source_id}{postfix}"
 
 

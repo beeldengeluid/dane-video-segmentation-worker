@@ -185,7 +185,7 @@ def apply_desired_io_on_output(
     delete_input_on_completion: bool,
     delete_output_on_completetion: bool,
     transfer_output_on_completion: bool,
-    tar_before_transfer: bool
+    tar_before_transfer: bool,
 ) -> CallbackResponse:
     media_file = proc_result.media_file
     if not media_file:
