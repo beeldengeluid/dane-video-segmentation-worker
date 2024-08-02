@@ -191,10 +191,7 @@ def transfer_output(source_id: str, as_tar: bool = True) -> str:
     if not success:
         logger.error(f"Failed to upload: {tar_file}")
         return ''
-    final_destination = os.path.join(cfg.OUTPUT.S3_BUCKET, prefix)
-    if as_tar:
-        final_destination = os.path.join(final_destination, tar_file)
-    return final_destination
+    return f's3://{cfg.OUTPUT.S3_BUCKET}/{prefix}/{tar_file}'
 
 
 def delete_input_file(input_file: str, actually_delete: bool) -> bool:
