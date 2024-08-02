@@ -14,6 +14,10 @@ RUN pipx run poetry export --without-hashes --format requirements.txt --output r
 
 FROM docker.io/python:3.11
 
+RUN apt-get clean && apt-get update -y && apt-get upgrade -y
+
+RUN apt-get install -y libgl1 ffmpeg
+
 # Create dirs for:
 # - Injecting config.yml: /root/.DANE
 # - Mount point for input & output files: /data
