@@ -256,9 +256,9 @@ def s3_download(s3_uri: str) -> Optional[DownloadResult]:
     logger.info(f"OBJECT NAME: {object_name}")
     input_file_path = os.path.join(
         get_download_dir(),
-        # source_id,
-        os.path.basename(object_name),  # i.e. visxp_prep__<source_id>.tar.gz
+        object_name,  # i.e. visxp_prep__<source_id>.tar.gz
     )
+
     success = s3.download_file(bucket, object_name, output_folder)
     if success:
         download_time = time.time() - start_time
