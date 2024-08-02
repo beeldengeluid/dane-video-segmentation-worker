@@ -180,7 +180,7 @@ def transfer_output(source_id: str, as_tar: bool = True) -> bool:
     if not as_tar:
         path_elements.append(OUTPUT_FILE_BASE_NAME)
     success = s3.transfer_to_s3(
-        cfg.OUTPUT.S3_BUCKET,
+        bucket=cfg.OUTPUT.S3_BUCKET,
         prefix=os.path.join(*path_elements),  # assets/<program ID>__<carrier ID>
         file_list=file_list,  # this list of files to be uploaded
         tar_archive_path=tar_file,  # compressed in this archive name, if as_tar
