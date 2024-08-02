@@ -204,15 +204,13 @@ def apply_desired_io_on_output(
     visxp_output_dir = get_base_output_dir(media_file.source_id)
 
     # step 6: transfer the output to S3 (if configured so)
-    transfer_success = True
+    final_destination = 'nowhere'
     if transfer_output_on_completion:
-        transfer_success = transfer_output(
+        final_destination = transfer_output(
             media_file.source_id, as_tar=tar_before_transfer
         )
 
-    if (
-        not transfer_success
-    ):  # failure of transfer, impedes the workflow, so return error
+    if not final_destination:  # failure of transfer, impedes the workflow, so return error
         return {
             "state": 500,
             "message": "Failed to transfer output to S3",
@@ -233,9 +231,11 @@ def apply_desired_io_on_output(
         return {
             "state": 500,
             "message": "Generated VISXP_PREP output, but could not delete the input file",
+            "destination": final_destination
         }
 
     return {
         "state": 200,
         "message": "Successfully generated VisXP data for the next worker",
+        "destination": final_destination
     }
