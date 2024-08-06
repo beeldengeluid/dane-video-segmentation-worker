@@ -10,10 +10,6 @@ from dane.base_classes import base_worker
 from dane.config import cfg
 from dane.provenance import Provenance
 from models import CallbackResponse
-from io_util import (
-    get_source_id,
-    get_s3_output_file_uri,
-)
 import main_data_processor
 
 
@@ -79,11 +75,12 @@ class VideoSegmentationWorker(base_worker):
             logger.info(
                 "applying IO on output went well, now finally saving to DANE index"
             )
+
             try:
                 self.save_to_dane_index(
                     doc,
                     task,
-                    get_s3_output_file_uri(get_source_id(input_file_path)),
+                    processing_result.get("destination", "nowhere"),
                     provenance=full_provenance_chain,
                 )
             except Exception as e:

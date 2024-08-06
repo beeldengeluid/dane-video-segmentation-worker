@@ -42,12 +42,16 @@ def run(
     # there must be an input file
     if not input_file_path:
         logger.error("input file empty")
-        return {"state": 403, "message": "Error, no input file"}, []
+        return {"state": 403, "message": "Error, no input file", "destination": ""}, []
 
     # check if the file system is setup properly
     if not validate_data_dirs():
         logger.info("ERROR: data dirs not configured properly")
-        return {"state": 500, "message": "Input & output dirs not ok"}, []
+        return {
+            "state": 500,
+            "message": "Input & output dirs not ok",
+            "destination": "",
+        }, []
 
     # create the top-level provenance
     top_level_provenance = generate_initial_provenance(
@@ -74,6 +78,7 @@ def run(
                 return {
                     "state": 500,
                     "message": f"Could not download {input_file_path}",
+                    "destination": "",
                 }, []
             else:
                 download_provenance = to_download_provenance(
@@ -109,6 +114,7 @@ def run(
             cfg.INPUT.DELETE_ON_COMPLETION,
             cfg.OUTPUT.DELETE_ON_COMPLETION,
             cfg.OUTPUT.TRANSFER_ON_COMPLETION,
+            cfg.OUTPUT.TAR_OUTPUT,
         )
     )
     return validated_output, full_provenance_chain
@@ -184,10 +190,15 @@ def apply_desired_io_on_output(
     delete_input_on_completion: bool,
     delete_output_on_completetion: bool,
     transfer_output_on_completion: bool,
+    tar_before_transfer: bool,
 ) -> CallbackResponse:
     media_file = proc_result.media_file
     if not media_file:
-        return {"state": 404, "message": "No media file in processing result"}
+        return {
+            "state": 404,
+            "message": "No media file in processing result",
+            "destination": "",
+        }
     # step 4: raise exception on failure
     if proc_result.state != 200:
         logger.error(f"Could not process the input properly: {proc_result.message}")
@@ -196,22 +207,29 @@ def apply_desired_io_on_output(
         )
         logger.info(f"Deleted input file of failed process: {input_deleted}")
         # something went wrong inside the VisXP work processor, return that response here
-        return {"state": proc_result.state, "message": proc_result.message}
+        return {
+            "state": proc_result.state,
+            "message": proc_result.message,
+            "destination": "",
+        }
 
     # step 5: process returned successfully, generate the output
     visxp_output_dir = get_base_output_dir(media_file.source_id)
 
     # step 6: transfer the output to S3 (if configured so)
-    transfer_success = True
+    final_destination = "nowhere"
     if transfer_output_on_completion:
-        transfer_success = transfer_output(media_file.source_id)
+        final_destination = transfer_output(
+            media_file.source_id, as_tar=tar_before_transfer
+        )
 
     if (
-        not transfer_success
+        not final_destination
     ):  # failure of transfer, impedes the workflow, so return error
         return {
             "state": 500,
             "message": "Failed to transfer output to S3",
+            "destination": "",
         }
 
     # step 7: clear the output files (if configured so)
@@ -229,9 +247,11 @@ def apply_desired_io_on_output(
         return {
             "state": 500,
             "message": "Generated VISXP_PREP output, but could not delete the input file",
+            "destination": final_destination,
         }
 
     return {
         "state": 200,
         "message": "Successfully generated VisXP data for the next worker",
+        "destination": final_destination,
     }
