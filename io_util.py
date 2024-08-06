@@ -170,7 +170,7 @@ def transfer_output(source_id: str, as_tar: bool = True) -> str:
     output_dir = get_base_output_dir(source_id)
     logger.info(f"Transferring {output_dir} to S3 (asset={source_id})")
     if not _validate_transfer_config():
-        return ''
+        return ""
 
     s3 = S3Store(cfg.OUTPUT.S3_ENDPOINT_URL)
     file_list = [os.path.join(output_dir, ot.value) for ot in S3_OUTPUT_TYPES]
@@ -190,8 +190,8 @@ def transfer_output(source_id: str, as_tar: bool = True) -> str:
     )
     if not success:
         logger.error(f"Failed to upload: {tar_file}")
-        return ''
-    return f's3://{cfg.OUTPUT.S3_BUCKET}/{prefix}/{tar_file}'
+        return ""
+    return f"s3://{cfg.OUTPUT.S3_BUCKET}/{prefix}/{tar_file}"
 
 
 def delete_input_file(input_file: str, actually_delete: bool) -> bool:

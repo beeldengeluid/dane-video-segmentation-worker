@@ -10,10 +10,6 @@ from dane.base_classes import base_worker
 from dane.config import cfg
 from dane.provenance import Provenance
 from models import CallbackResponse
-from io_util import (
-    get_source_id,
-    get_s3_output_file_uri,
-)
 import main_data_processor
 
 
