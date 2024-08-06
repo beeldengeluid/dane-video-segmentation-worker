@@ -3,7 +3,8 @@
 # dane-video-segmentation-worker
 
 Running Scenedetect to detect shots and select keyframes.
-Including code for extracting keyframes,  extracting audio, and generating spectrograms.
+Including code for extracting the keyframes too.
+Extracting audio and generating spectrograms are legacy options and might not work well anymore. 
 
 
 ## Installation
@@ -115,7 +116,8 @@ VISXP_PREP:
 INPUT:
     DELETE_ON_COMPLETION: False  # NOTE: set to True in production environment
 OUTPUT:
-    DELETE_ON_COMPLETION: True
+    DELETE_ON_COMPLETION: False  # NOTE: set to True in production environment
+    TAR_OUTPUT: false
     TRANSFER_ON_COMPLETION: True
     S3_ENDPOINT_URL: https://your-s3-host/
     S3_BUCKET: your-s3-bucket  # bucket reserved for 1 type of output
